@@ -120,9 +120,27 @@ class PdaReceiveScreen(tk.Frame):
         container, self.tree = setup_treeview(mid, STAGE_COLUMNS, STAGE_HEADINGS, STAGE_WIDTHS, height=7)
         # [2026-10-15] 창을 줄이면 저장/삭제 버튼이 목록 오른쪽 밖으로 밀려 안 보여서, 버튼을
         # 먼저(오른쪽 끝) 배치하고 목록이 남는 폭만큼만 차지하게(넘치면 가로 스크롤) 바꿨다.
+        # 단, 창을 넓히면 버튼이 멀리 떨어져 보여서 넓을 때는 목록 바로 옆으로 붙인다(아래 _place_side).
+        # 창이 넓으면 버튼이 목록 바로 옆에, 좁아 목록과 같이 못 들어가면 오른쪽 끝에 놓는다.
         side_btns = tk.Frame(mid, bg=CL_BG)
-        side_btns.pack(side=tk.RIGHT, fill=tk.Y, padx=6)
-        container.pack(side=tk.LEFT, fill=tk.Y)
+        self._side_mode = None
+
+        def _place_side(_e=None):
+            need = container.winfo_reqwidth() + side_btns.winfo_reqwidth() + 16
+            mode = "near" if mid.winfo_width() >= need else "edge"
+            if mode == self._side_mode:
+                return
+            self._side_mode = mode
+            container.pack_forget()
+            side_btns.pack_forget()
+            if mode == "near":
+                container.pack(side=tk.LEFT, fill=tk.Y)
+                side_btns.pack(side=tk.LEFT, fill=tk.Y, padx=6)
+            else:
+                side_btns.pack(side=tk.RIGHT, fill=tk.Y, padx=6)
+                container.pack(side=tk.LEFT, fill=tk.Y)
+        mid.bind("<Configure>", _place_side)
+        _place_side()
 
         self.tree.tag_configure("dup", background=COLOR_DUP_ROW)
         win_button(side_btns, text="저장", width=8, command=self.save_staged, kind="accent").pack(pady=(40, 6))

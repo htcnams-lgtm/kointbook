@@ -100,8 +100,8 @@ class ProductMasterScreen(tk.Frame):
         # 계열과 "전송" 버튼이 헷갈리지 않게 구분했다.
         # [2026-10-13] 서적/문구는 파일 양식이 달라서 불러오기 버튼을 둘로 나눴다(각각 같은 구분만 교체).
         imp = tk.Frame(top, bg=COLOR_HEADER_BG)
-        imp.grid(row=0, column=7, padx=(24, 12))
-        win_button(imp, text="서적 불러오기", command=lambda: self.import_kind("서적"), kind="normal").pack(side=tk.LEFT, padx=(0, 4))
+        imp.grid(row=0, column=7, padx=(80, 12))
+        win_button(imp, text="서적 불러오기", command=lambda: self.import_kind("서적"), kind="normal").pack(side=tk.LEFT, padx=(0, 30))
         win_button(imp, text="문구 불러오기", command=lambda: self.import_kind("문구"), kind="normal").pack(side=tk.LEFT)
 
         # ---- 조회 줄 ----
@@ -127,7 +127,7 @@ class ProductMasterScreen(tk.Frame):
         self.cb_unreg.set(dbmod.get_unreg_policy())
         self.cb_unreg.pack(side=tk.LEFT)
         self.cb_unreg.bind("<<ComboboxSelected>>", lambda e: dbmod.set_setting("unreg_policy", self.cb_unreg.get()))
-        win_button(search_row, text="⬆ PDA전송", command=self.send_to_pda, kind="normal").pack(side=tk.LEFT, padx=(30, 4))
+        win_button(search_row, text="⬆ PDA전송", command=self.send_to_pda, kind="normal").pack(side=tk.LEFT, padx=(90, 4))
 
         columns = ("no", "kind", "isbn", "book_name", "category", "publisher", "ledger_qty", "real_qty", "missing_qty", "exception")
         headings = ("NO", "구분", "바코드", "도서명", "분야명", "출판사", "전산재고", "실재고", "누락재고", "예외여부")
