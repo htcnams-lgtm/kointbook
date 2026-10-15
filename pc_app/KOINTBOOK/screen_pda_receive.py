@@ -57,7 +57,7 @@ from . import adb_utils
 from .progress_dialog import run_with_progress
 from .ui_common import (
     COLOR_HEADER_BG, setup_treeview, export_rows_to_excel,
-    today_str, CL_BG, CL_NAVY, CL_GOLD, CL_TEXT_DIM, win_button
+    today_str, split_scan_datetime, CL_BG, CL_NAVY, CL_GOLD, CL_TEXT_DIM, win_button
 )
 
 # [2026-09-28] 작업자별 실사집계 막대그래프에 쓰는 색상 순환(ZZOINT와 동일).
@@ -65,12 +65,12 @@ COLOR_DUP_ROW = "#FADADD"  # [2026-10-08] 중복 강조(ZZOINT와 같은 분홍)
 BAR_COLORS = [CL_NAVY, CL_GOLD, "#5F6470", "#7C9AC7", "#8A6D2E", "#3E5C8A"]
 
 STAGE_COLUMNS = ("no", "area", "section", "shelf_no", "dan", "yeol", "isbn", "book_name",
-                 "qty", "worker_code", "worker_name", "received_at", "store_code")
+                 "qty", "worker_code", "worker_name", "scan_date", "scan_time", "store_code")
 STAGE_HEADINGS = ("NO", "AREA", "SECTION", "서가번호", "단", "열", "바코드", "상품명",
-                  "실사수량", "작업자코드", "작업자명", "실사일시", "점포코드")
+                  "실사수량", "작업자코드", "작업자명", "실사일자", "실사시간", "점포코드")
 # [2026-09-23 정정] "SECTION" 컬럼이 좁아서 마지막 글자(N)가 잘려 보였다 -
 # 헤더 글자가 안 잘리도록 폭을 넉넉하게 늘렸다.
-STAGE_WIDTHS = (40, 60, 95, 70, 45, 45, 120, 220, 70, 80, 80, 130, 100)
+STAGE_WIDTHS = (40, 60, 95, 70, 45, 45, 120, 220, 70, 90, 90, 95, 85, 100)
 
 
 class PdaReceiveScreen(tk.Frame):
@@ -498,7 +498,8 @@ class PdaReceiveScreen(tk.Frame):
             self.tree.insert("", tk.END, values=(
                 i, r.get("area", ""), r.get("section", ""), r.get("shelf_no", ""), r.get("dan", ""),
                 r.get("yeol", ""), r.get("isbn", ""), r.get("book_name", ""), f"{int(r.get('qty') or 0):,}",
-                r.get("worker_code", ""), r.get("worker_name", ""), r.get("received_at", ""),
+                r.get("worker_code", ""), r.get("worker_name", ""),
+                *split_scan_datetime(r.get("received_at", "")),
                 (r.get("store_code") or "").strip() or self.app.state.store_code
             ), tags=("odd",) if i % 2 == 0 else ())
 
