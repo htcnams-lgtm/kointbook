@@ -122,11 +122,11 @@ class DataGenerateScreen(tk.Frame):
         win_button(lh, text="출력", command=self.print_view, kind="normal").pack(side=tk.LEFT)
         win_button(lh, text="엑셀저장", command=self.save_excel_dialog, kind="accent").pack(side=tk.LEFT, padx=6)
 
-        columns = ("no", "date", "store_code", "isbn", "book_name", "qty",
+        columns = ("no", "store_code", "isbn", "book_name", "qty",
                    "area", "section", "shelf_no", "dan", "yeol", "worker", "scan_date", "time")
-        headings = ("NO", "조사일자", "점포코드", "바코드", "도서명", "조사수량",
+        headings = ("NO", "점포코드", "바코드", "도서명", "조사수량",
                     "AREA", "SECTION", "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
-        widths = (45, 90, 90, 120, 220, 70, 55, 60, 95, 40, 40, 90, 90, 80)
+        widths = (45, 90, 120, 220, 70, 55, 60, 95, 40, 40, 90, 90, 80)
         self.vl = VirtualList(self, columns, headings, widths, height=8, on_loaded=self._on_loaded)
         self.vl.container.pack(fill=tk.BOTH, expand=True, padx=8, pady=(6, 0))
         self.tree = self.vl.tree
@@ -152,7 +152,7 @@ class DataGenerateScreen(tk.Frame):
         엉뚱한 칸에 엉뚱한 값이 보이고 있었다 - 여기서 표 컬럼 순서에 맞게
         직접 값을 뽑아 맞춘다."""
         scan_date, scan_time = split_scan_datetime(r["received_at"], r["survey_date"])
-        return (no, r["survey_date"], r["store_code"], r["isbn"], r["book_name"], f"{r['qty'] or 0:,}",
+        return (no, r["store_code"], r["isbn"], r["book_name"], f"{r['qty'] or 0:,}",
                 r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"], r["worker_name"], scan_date, scan_time)
 
     def refresh(self):
