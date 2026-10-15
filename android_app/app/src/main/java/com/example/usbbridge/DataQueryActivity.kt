@@ -190,7 +190,7 @@ class DataQueryActivity : BaseActivity() {
     private fun confirmDeleteAll() {
         val filtered = shownFiltered
         val targets = shownLocations
-        if (filtered && targets.isEmpty()) {
+        if (targets.isEmpty()) {
             Toast.makeText(this, "삭제할 위치가 없습니다.", Toast.LENGTH_SHORT).show()
             return
         }

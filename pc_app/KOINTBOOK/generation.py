@@ -63,7 +63,7 @@ kyobo_data2.txt + 인천_결과확인리스트(20251017).xlsx + 인천_서가별
 import re
 from pathlib import Path
 from . import db as dbmod
-from .ui_common import today_str, normalize_area, short_store_label, write_text_lines_file, eof_crlf_enabled
+from .ui_common import today_str, normalize_area, short_store_label, write_text_lines_file, eof_crlf_enabled, split_scan_datetime
 from .masters import norm_barcode, bc13, disp_qty, disp_exc
 from . import scope
 
@@ -154,10 +154,12 @@ def raw_rows(app, kind="전체"):
         rows = s if kind == "문구" else b
     else:
         rows = _fetch_counts(app.state.store_code, app.state.survey_date)
-    headers = ("실사일자", "점포코드", "AREA", "SECTION", "서가번호", "단", "열", "바코드", "상품명",
-               "조사수량", "작업자코드", "작업자명", "실사일시")
-    data = [(r["survey_date"], r["store_code"], r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"],
-             r["isbn"], r["book_name"], r["qty"], r["worker_code"], r["worker_name"], r["received_at"])
+    # [2026-10-15] 조사일자 열은 뺐다(조회 기준일 뿐). 스캔한 일시는 실사일자/실사시간 두 열로 나눠 보여준다.
+    headers = ("점포코드", "바코드", "상품명", "조사수량", "AREA", "SECTION", "서가번호", "단", "열",
+               "작업자코드", "작업자명", "실사일자", "실사시간")
+    data = [(r["store_code"], r["isbn"], r["book_name"], r["qty"], r["area"], r["section"], r["shelf_no"],
+             r["dan"], r["yeol"], r["worker_code"], r["worker_name"],
+             *split_scan_datetime(r["received_at"], r["survey_date"]))
             for r in rows]
     return headers, data
 
@@ -171,6 +173,19 @@ def _norm_area_code(v):
     if s.endswith(".0"):
         s = s[:-2]
     return s.zfill(2) if s.isdigit() else s
+
+
+def _received_at_from_row(g, r):
+    """합산자료 한 줄의 스캔 일시를 "YYYY-MM-DD HH:MM:SS"로 돌려준다. 예전 파일은 "실사일시" 한 열,
+    새 파일(2026-10-15~)은 "실사일자"(YYYYMMDD) + "실사시간"(HH:MM:SS) 두 열이다."""
+    old = str(g(r, "실사일시") or "").strip()
+    if old:
+        return old
+    d = str(g(r, "실사일자") or "").strip()
+    t = str(g(r, "실사시간") or "").strip()
+    if d.isdigit() and len(d) == 8 and (g(r, "실사시간") is not None):
+        return f"{d[:4]}-{d[4:6]}-{d[6:8]} {t or '00:00:00'}"
+    return ""
 
 
 def read_area_file(path):
@@ -219,7 +234,7 @@ def read_area_file(path):
             "qty": qty,
             "worker_code": str(g(r, "작업자코드") or ""),
             "worker_name": str(g(r, "작업자명") or ""),
-            "received_at": str(g(r, "실사일시") or ""),
+            "received_at": _received_at_from_row(g, r),
         })
     wb.close()
     return out
@@ -512,9 +527,9 @@ def unregistered_rows(app):
     conn = dbmod.get_conn()
     registered = {norm_barcode(r["isbn"]) for r in conn.execute("SELECT isbn FROM books WHERE store_code=?", (store_code,))}
     conn.close()
-    headers = ("AREA", "SECTION", "서가번호", "단", "열", "바코드", "상품명", "조사수량", "작업자명", "실사일시")
+    headers = ("AREA", "SECTION", "서가번호", "단", "열", "바코드", "상품명", "조사수량", "작업자명", "실사일자", "실사시간")
     data = [(r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"], bc13(r["isbn"]), r["book_name"],
-             r["qty"], r["worker_name"], r["received_at"])
+             r["qty"], r["worker_name"], *split_scan_datetime(r["received_at"], r["survey_date"]))
             for r in rows if norm_barcode(r["isbn"]) not in registered]
     return headers, data
 

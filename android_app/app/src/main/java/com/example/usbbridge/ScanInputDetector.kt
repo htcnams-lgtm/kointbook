@@ -30,6 +30,19 @@ class ScanInputDetector(
     /** 프로그램이 setText 등으로 값을 넣는 동안에는 true로 두어 스캔으로 오인하지 않게 한다. */
     var suppressed = false
 
+    private var blockedUntil = 0L
+
+    /**
+     * [2026-10-15] 물리 숫자키를 꾹 누르면(키 자동반복) 글자가 빠르게 들어와 스캐너 입력으로 오인되어
+     * 엔터 없이 확정되던 문제. 키 이벤트의 repeatCount > 0 이면 사람이 누른 키이므로 이 값을 부른다:
+     * 대기 중인 자동 처리를 취소하고, 잠시(idleMs + 300ms) 동안 들어오는 글자를 스캔으로 세지 않는다.
+     */
+    fun noteKeyRepeat() {
+        handler.removeCallbacks(fire)
+        burstChars = 0
+        blockedUntil = SystemClock.uptimeMillis() + idleMs + 300
+    }
+
     /** 방금 들어온 입력이 스캐너의 연속 입력(버스트)인지. */
     val isBurst: Boolean get() = burstChars >= minChars
 
@@ -46,6 +59,7 @@ class ScanInputDetector(
     fun noteInput(chars: Int) {
         if (suppressed || chars <= 0) return
         val now = SystemClock.uptimeMillis()
+        if (now < blockedUntil) return
         if (now - lastInputAt > maxGapMs) burstChars = 0
         burstChars += chars
         lastInputAt = now

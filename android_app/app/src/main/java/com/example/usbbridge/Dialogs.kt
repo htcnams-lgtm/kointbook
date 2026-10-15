@@ -96,14 +96,14 @@ object Dialogs {
         }
         root.addView(TextView(activity).apply {
             text = title
-            textSize = 17f
+            textSize = 19f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, 0, 0, activity.dp(10))
         })
         val tvMessage = TextView(activity).apply {
             text = message
-            textSize = 14f
+            textSize = 16f
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, 0, 0, activity.dp(12))
         }
@@ -119,7 +119,7 @@ object Dialogs {
         root.addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, activity.dp(10)))
 
         val tvDetail = TextView(activity).apply {
-            textSize = 13f
+            textSize = 15f
             gravity = android.view.Gravity.CENTER
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, activity.dp(10), 0, 0)
@@ -152,25 +152,27 @@ object Dialogs {
         }
         root.addView(TextView(activity).apply {
             text = title
-            textSize = 17f
+            textSize = 19f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, 0, 0, activity.dp(10))
         })
         root.addView(TextView(activity).apply {
             text = message
-            textSize = 14f
+            textSize = 16f
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, 0, 0, activity.dp(18))
         })
 
         val btnNegative = Button(activity).apply {
             text = negativeText
+            textSize = 17f
             setTextColor(ContextCompat.getColor(activity, R.color.danger_red))
             background = ContextCompat.getDrawable(activity, R.drawable.button_secondary)
         }
         val btnPositive = Button(activity).apply {
             text = positiveText
+            textSize = 17f
             setTextColor(Color.parseColor("#FFFFFF"))
             background = ContextCompat.getDrawable(activity, R.drawable.button_classic)
         }
@@ -251,14 +253,14 @@ object Dialogs {
      * [2026-09-30] "미전송확인 팝업창 속 글자,숫자크기 지금에 2사이즈 크게" -
      * 이 팝업만 메시지 글씨 크기를 따로 키울 수 있도록 messageTextSize를
      * 추가했다(기본값 14f는 그대로라 다른 info() 호출부는 영향 없음). */
-    fun info(activity: Activity, title: String, message: String, buttonText: String = "확인", messageTextSize: Float = 14f) {
+    fun info(activity: Activity, title: String, message: String, buttonText: String = "확인", messageTextSize: Float = 16f) {
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(activity.dp(20), activity.dp(20), activity.dp(20), activity.dp(16))
         }
         root.addView(TextView(activity).apply {
             text = title
-            textSize = 17f
+            textSize = 19f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, 0, 0, activity.dp(10))
@@ -272,6 +274,7 @@ object Dialogs {
 
         val btnOk = Button(activity).apply {
             text = buttonText
+            textSize = 17f
             setTextColor(Color.parseColor("#FFFFFF"))
             background = ContextCompat.getDrawable(activity, R.drawable.button_classic)
         }
@@ -301,7 +304,7 @@ object Dialogs {
         }
         root.addView(TextView(activity).apply {
             text = title
-            textSize = 17f
+            textSize = 19f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, 0, 0, activity.dp(14))
@@ -313,11 +316,13 @@ object Dialogs {
 
         val btnNegative = Button(activity).apply {
             text = negativeText
+            textSize = 17f
             setTextColor(ContextCompat.getColor(activity, R.color.danger_red))
             background = ContextCompat.getDrawable(activity, R.drawable.button_secondary)
         }
         val btnPositive = Button(activity).apply {
             text = positiveText
+            textSize = 17f
             setTextColor(Color.parseColor("#FFFFFF"))
             background = ContextCompat.getDrawable(activity, R.drawable.button_classic)
         }
@@ -354,14 +359,14 @@ object Dialogs {
         }
         root.addView(TextView(activity).apply {
             text = title
-            textSize = 17f
+            textSize = 19f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, 0, 0, activity.dp(10))
         })
         root.addView(TextView(activity).apply {
             text = message
-            textSize = 13f
+            textSize = 15f
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, 0, 0, activity.dp(12))
         })
@@ -381,11 +386,13 @@ object Dialogs {
 
         val btnDelete = Button(activity).apply {
             text = "삭제"
+            textSize = 17f
             setTextColor(Color.parseColor("#FFFFFF"))
             background = ContextCompat.getDrawable(activity, R.drawable.button_danger)
         }
         val btnSave = Button(activity).apply {
             text = "저장"
+            textSize = 17f
             setTextColor(Color.parseColor("#FFFFFF"))
             background = ContextCompat.getDrawable(activity, R.drawable.button_classic)
         }
@@ -443,7 +450,7 @@ object Dialogs {
         }
         root.addView(TextView(activity).apply {
             text = title
-            textSize = 17f
+            textSize = 19f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Color.parseColor("#000000"))
             setPadding(0, 0, 0, activity.dp(10))
@@ -451,7 +458,7 @@ object Dialogs {
         if (message.isNotEmpty()) {
             root.addView(TextView(activity).apply {
                 text = message
-                textSize = 13f
+                textSize = 15f
                 setTextColor(Color.parseColor("#000000"))
                 setPadding(0, 0, 0, activity.dp(12))
             })
@@ -469,6 +476,7 @@ object Dialogs {
 
         val btnCancel = Button(activity).apply {
             text = "취소"
+            textSize = 17f
             setTextColor(ContextCompat.getColor(activity, R.color.danger_red))
             background = ContextCompat.getDrawable(activity, R.drawable.button_secondary)
         }
@@ -482,6 +490,7 @@ object Dialogs {
         for ((index, opt) in options.withIndex()) {
             val optBtn = Button(activity).apply {
                 text = opt
+                textSize = 17f
                 isAllCaps = false
                 setTextColor(Color.parseColor("#FFFFFF"))
                 background = ContextCompat.getDrawable(activity, R.drawable.button_classic)

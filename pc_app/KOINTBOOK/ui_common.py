@@ -1310,19 +1310,36 @@ def digit_code_variants(keyword, width):
     return sorted(variants)
 
 
-def area_section_code(area, section, section_width=3):
+
+_SCAN_DT_RE = re.compile(r"(\d{4})\D?(\d{2})\D?(\d{2})(?:\D+(\d{2}):?(\d{2}):?(\d{2})?)?")
+
+
+def split_scan_datetime(received_at, fallback_date=""):
+    """[2026-10-15] 스캔한 일시(received_at, 예 "2026-10-08 14:03:11")를 (일자 "20261008", 시간 "14:03:11")로
+    나눈다. 표시할 때만 문자열을 자르므로 DB 조회/속도에는 영향이 없다. 일시가 비었거나 해석이 안 되면
+    (fallback_date, "")를 돌려준다."""
+    m = _SCAN_DT_RE.match(str(received_at or "").strip())
+    if not m:
+        return str(fallback_date or ""), ""
+    y, mo, d, h, mi, se = m.groups()
+    return f"{y}{mo}{d}", (f"{h}:{mi}:{se or '00'}" if h else "")
+
+
+def area_section_code(area, section, section_width=3, sep=""):
     """[2026-09-23 현장 확인] Section Check/재고조사 진행 현황 화면의
     "A_SECTION" 코드 - AREA(2자리 숫자, normalize_area) + SECTION(기본
     3자리 0채움)을 이어붙인 값이다("01"+"101" -> "01101"). AREA/SECTION은
     화면 입력칸에서는 계속 따로 받고, 표에 보여줄 때만 이 함수로 합친다.
-    SECTION이 숫자가 아니면(예외적인 값) 0채움 없이 그대로 이어붙인다."""
+    SECTION이 숫자가 아니면(예외적인 값) 0채움 없이 그대로 이어붙인다.
+    [2026-10-15] sep="-"를 주면 "10-100"처럼 AREA와 SECTION 사이에 하이픈을 넣는다
+    (Section Check/재고조사 진행현황 화면 요청, 기본값은 예전처럼 붙여쓰기)."""
     area_2 = normalize_area(area, merged=True)
     sec = str(section).strip() if section is not None else ""
     try:
         sec_padded = str(int(sec)).zfill(section_width)
     except (TypeError, ValueError):
         sec_padded = sec
-    return f"{area_2}{sec_padded}"
+    return f"{area_2}{sep}{sec_padded}"
 
 
 def parse_section_range(text):

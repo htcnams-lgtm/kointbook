@@ -89,6 +89,8 @@ class LocationInputActivity : BaseActivity() {
     private fun applyKind() {
         val st = isStationeryNow()
         rowShelf.visibility = if (st) android.view.View.GONE else android.view.View.VISIBLE
+        findViewById<android.view.View>(R.id.tvStationeryNote).visibility =
+            if (st) android.view.View.VISIBLE else android.view.View.GONE
         findViewById<TextView>(R.id.tvTitleBarText).text =
             if (st) "KOINTBOOK [문구 위치입력]" else "KOINTBOOK [위치입력]"
         etSection.imeOptions = if (st) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NEXT
@@ -195,6 +197,8 @@ class LocationInputActivity : BaseActivity() {
             // 값은 바로 고쳐 쓸 수 있게 전체 선택까지 해준다).
             field.setOnKeyListener { _, keyCode, keyEvent ->
                 if (keyEvent.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+                // 키를 꾹 눌러 자동반복되는 입력은 스캔이 아니다(ScanInputDetector.noteKeyRepeat 참고).
+                if (keyEvent.repeatCount > 0) detectors[index].noteKeyRepeat()
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
                         if (index < lastIndex()) {

@@ -14,7 +14,7 @@ from . import generation
 from . import scope
 from .scope_ui import ScopeBar
 from .ui_common import setup_treeview, export_rows_to_excel, write_rows_to_excel_file, today_str, \
-    CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
+    CL_BG, CL_NAVY, CL_TEXT_DIM, win_button, split_scan_datetime
 
 
 # [2026-09-28] 실사데이터가 몇 만 건씩 쌓이면 표에 한꺼번에 다 채울 때 화면이
@@ -122,11 +122,11 @@ class DataGenerateScreen(tk.Frame):
         win_button(lh, text="출력", command=self.print_view, kind="normal").pack(side=tk.LEFT)
         win_button(lh, text="엑셀저장", command=self.save_excel_dialog, kind="accent").pack(side=tk.LEFT, padx=6)
 
-        columns = ("no", "date", "store_code", "isbn", "book_name", "qty",
-                   "area", "section", "shelf_no", "dan", "yeol", "worker", "time")
-        headings = ("NO", "실사일자", "점포코드", "바코드", "도서명", "조사수량",
-                    "AREA", "SECTION", "서가번호", "단", "열", "작업자", "실사일시")
-        widths = (45, 90, 90, 120, 220, 70, 55, 60, 95, 40, 40, 90, 130)
+        columns = ("no", "store_code", "isbn", "book_name", "qty",
+                   "area", "section", "shelf_no", "dan", "yeol", "worker", "scan_date", "time")
+        headings = ("NO", "점포코드", "바코드", "도서명", "조사수량",
+                    "AREA", "SECTION", "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
+        widths = (45, 90, 120, 220, 70, 55, 60, 95, 40, 40, 90, 90, 80)
         self.vl = VirtualList(self, columns, headings, widths, height=8, on_loaded=self._on_loaded)
         self.vl.container.pack(fill=tk.BOTH, expand=True, padx=8, pady=(6, 0))
         self.tree = self.vl.tree
@@ -151,8 +151,9 @@ class DataGenerateScreen(tk.Frame):
         상품명/...)로 만들어진 것이라, 실제로는 컬럼과 값이 하나씩 밀려서
         엉뚱한 칸에 엉뚱한 값이 보이고 있었다 - 여기서 표 컬럼 순서에 맞게
         직접 값을 뽑아 맞춘다."""
-        return (no, r["survey_date"], r["store_code"], r["isbn"], r["book_name"], f"{r['qty'] or 0:,}",
-                r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"], r["worker_name"], r["received_at"])
+        scan_date, scan_time = split_scan_datetime(r["received_at"], r["survey_date"])
+        return (no, r["store_code"], r["isbn"], r["book_name"], f"{r['qty'] or 0:,}",
+                r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"], r["worker_name"], scan_date, scan_time)
 
     def refresh(self):
         self.lbl_store_code.config(text=self.app.state.store_code)

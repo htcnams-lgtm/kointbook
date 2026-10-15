@@ -21,15 +21,15 @@
             android:orientation="vertical"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp">
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp">
 
             <!-- 매장 (점포코드 / 점포명)
                  [2026-09-30] "점포코드/ 점포명 항목 제목 , 작업자 항목제목
                  1사이즈 크고 굵게" - 12sp -> 13sp, 굵게 추가. -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="점포코드 / 점포명" android:textSize="13sp" android:textStyle="bold" android:textColor="@color/text_secondary"
-                android:layout_marginBottom="2dp" />
+                android:text="점포코드 / 점포명" android:textSize="15sp" android:textStyle="bold" android:textColor="@color/text_secondary"
+                android:layout_marginBottom="4dp" />
             <TextView
                 android:id="@+id/tvStore"
                 android:layout_width="match_parent"
@@ -37,17 +37,17 @@
                 android:background="@drawable/edit_classic"
                 android:paddingStart="9dp"
                 android:paddingEnd="9dp"
-                android:paddingTop="5dp"
-                android:paddingBottom="5dp"
-                android:textSize="14sp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:textSize="17sp"
                 android:textColor="@color/text_primary"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="13dp"
                 android:text="KOINTBOOK / KOINTBOOK" />
 
             <!-- 작업자 -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="작업자" android:textSize="13sp" android:textStyle="bold" android:textColor="@color/text_secondary"
-                android:layout_marginBottom="2dp" />
+                android:text="작업자" android:textSize="15sp" android:textStyle="bold" android:textColor="@color/text_secondary"
+                android:layout_marginBottom="4dp" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -55,9 +55,9 @@
                 android:background="@drawable/edit_classic"
                 android:paddingStart="9dp"
                 android:paddingEnd="9dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
-                android:layout_marginBottom="4dp">
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:layout_marginBottom="13dp">
 
                 <EditText
                     android:id="@+id/etWorkerCode"
@@ -66,13 +66,13 @@
                     android:background="@drawable/edit_inline_focus"
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
                     android:hint="번호"
                     android:textColorHint="@color/text_secondary"
                     android:inputType="number"
                     android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
+                    android:textSize="17sp" />
 
                 <TextView
                     android:id="@+id/tvWorkerName"
@@ -81,21 +81,21 @@
                     android:layout_weight="1"
                     android:gravity="center_vertical"
                     android:paddingStart="8dp"
-                    android:textSize="14sp"
+                    android:textSize="17sp"
                     android:textStyle="bold"
                     android:textColor="@color/accent" />
             </LinearLayout>
 
             <!-- 품목수량 + 다음 버튼(작게, 바로 옆) -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="품목수량" android:textSize="12sp" android:textColor="@color/text_secondary"
-                android:layout_marginBottom="2dp" />
+                android:text="품목수량" android:textSize="15sp" android:textStyle="bold" android:textColor="@color/text_secondary"
+                android:layout_marginBottom="4dp" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="6dp">
+                android:layout_marginBottom="13dp">
 
                 <TextView
                     android:id="@+id/tvItemCount"
@@ -105,9 +105,9 @@
                     android:background="@drawable/edit_classic"
                     android:paddingStart="9dp"
                     android:paddingEnd="9dp"
-                    android:paddingTop="5dp"
-                    android:paddingBottom="5dp"
-                    android:textSize="14sp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:textSize="17sp"
                     android:textColor="@color/text_primary"
                     android:text="0" />
 
@@ -122,7 +122,7 @@
                     android:elevation="2dp"
                     android:textColor="#FFFFFF"
                     android:text="다음"
-                    android:textSize="13sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp" />
@@ -134,7 +134,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/edit_classic"
-                android:padding="8dp"
+                android:padding="7dp"
                 android:layout_marginBottom="4dp">
 
                 <!-- [2026-09-30] "받은 마스터: 상품 N건 글자크기 2사이즈 크게" -
@@ -143,7 +143,7 @@
                     android:id="@+id/tvMasterReceiveStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textSize="14sp"
+                    android:textSize="16sp"
                     android:textColor="@color/text_primary"
                     android:layout_marginBottom="4dp"
                     android:text="PC에서 마스터 전송을 기다리는 중..." />
@@ -159,12 +159,16 @@
                         android:id="@+id/btnMasterReceive"
                         android:layout_width="0dp"
                         android:layout_weight="1"
-                        android:layout_height="36dp"
+                        android:layout_height="42dp"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
                         android:background="@drawable/button_classic"
                         android:elevation="2dp"
                         android:textColor="#FFFFFF"
                         android:text="⬇ 마스터 수신"
-                        android:textSize="14sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         android:layout_marginEnd="6dp" />
 
@@ -172,11 +176,15 @@
                         android:id="@+id/btnMasterReset"
                         android:layout_width="0dp"
                         android:layout_weight="1"
-                        android:layout_height="36dp"
+                        android:layout_height="42dp"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
                         android:background="@drawable/button_secondary"
                         android:textColor="@color/danger_red"
                         android:text="초기화"
-                        android:textSize="14sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>

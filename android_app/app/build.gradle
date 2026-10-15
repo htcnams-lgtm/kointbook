@@ -19,8 +19,24 @@ android {
         applicationId "com.kointbook.app"
         minSdk 21
         targetSdk 34
-        versionCode 15
-        versionName "1.5.0"
+        versionCode 29
+        versionName "1.5.14"
+    }
+
+    // [2026-10-15] 빌드마다 서명이 달라 "서명이 달라 덮어쓸 수 없다" 팝업이 새 버전 첫 설치 때마다 뜨던 문제:
+    // GitHub 빌드가 ~/.android/debug.keystore를 못 찾고 매번 새 임시 키를 만들었다고 판단해,
+    // 워크플로가 Secrets의 키를 파일로 풀어 KOINT_KEYSTORE 환경변수로 알려 주면 debug 서명에 그 파일을 직접 쓴다.
+    // (환경변수가 없는 PC/Android Studio 빌드는 예전처럼 기본 debug.keystore를 쓴다.)
+    signingConfigs {
+        debug {
+            def ks = System.getenv("KOINT_KEYSTORE")
+            if (ks != null && !ks.isEmpty()) {
+                storeFile file(ks)
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
+        }
     }
 
     buildTypes {

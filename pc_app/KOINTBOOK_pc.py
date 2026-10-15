@@ -44,6 +44,7 @@ import tkinter as tk
 from pathlib import Path
 
 from KOINTBOOK.version import APP_VERSION
+from KOINTBOOK import big_messagebox
 
 def _fatal_start_error():
     """[2026-10-13] 시작 중(불러오기 단계)에 오류가 나도 창이 바로 닫히지 않게, 오류 내용을 화면에
@@ -260,6 +261,12 @@ class KointBookPcApp:
         )
         self.quicklink_label.pack(side=tk.RIGHT, padx=16)
         self.quicklink_label.bind("<Button-1>", lambda e: self._jump_to_active())
+        # [2026-10-15] "활성화면 바로가기" 왼쪽에 PDA 초기화면처럼 버전과 카피라이트를 표시한다.
+        self.version_label = tk.Label(
+            bar, text=f"VER. {APP_VERSION}   © 2026 namsman", bg=CL_NAVY_DARK, fg="#C9CED8",
+            font=("", 9),
+        )
+        self.version_label.pack(side=tk.RIGHT, padx=(0, 4))
 
         # 드롭다운 밖(다른 메뉴 버튼도 아닌 곳)을 클릭하면 닫는다. 클릭이
         # 메뉴 버튼 자신 위에서 일어난 경우는 각 버튼의 <Button-1>(토글)이
@@ -490,6 +497,7 @@ def main():
     dbmod.init_db()
     atexit.register(adb_utils.kill_server)
     root = tk.Tk()
+    big_messagebox.install()  # 알림창 글씨 크게
     _set_app_icon(root)
     KointBookPcApp(root)
     dbmod.analyze_in_background()  # 큰 조회가 빨라지도록 DB 통계를 화면 뒤에서 갱신

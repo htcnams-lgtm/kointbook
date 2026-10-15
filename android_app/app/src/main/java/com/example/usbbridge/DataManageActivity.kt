@@ -146,7 +146,7 @@ class DataManageActivity : BaseActivity() {
             this,
             "알림",
             "미전송데이터 : ${fmtCount(totalCount)}건\nPC 미전송데이터 : ${fmtCount(pendingForPc)}건",
-            messageTextSize = 16f
+            messageTextSize = 18f
         )
     }
 

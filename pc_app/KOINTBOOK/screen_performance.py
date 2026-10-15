@@ -55,7 +55,7 @@ from .ui_common import (
     center_on_app,
     setup_treeview, export_rows_to_excel, today_str, normalize_area,
     digit_code_variants as _digit_code_variants,
-    CL_BG, CL_NAVY, CL_TEXT, CL_TEXT_DIM, win_button
+    CL_BG, CL_NAVY, CL_TEXT, CL_TEXT_DIM, win_button, split_scan_datetime
 )
 
 CL_READONLY_BG = "#E4E4E4"  # 읽기전용 칸(수정 못 하고 보여주기만 하는 칸)의 회색 배경
@@ -179,11 +179,11 @@ class PerformanceScreen(tk.Frame):
         win_button(actions, text="엑셀저장", command=self.export_excel, kind="accent").pack(side=tk.RIGHT, padx=4)
 
         columns = ("check", "no", "store_code", "isbn", "book_name", "qty", "area", "section",
-                   "shelf_no", "dan", "yeol", "date", "worker")
+                   "shelf_no", "dan", "yeol", "worker", "date", "time")
         headings = ("선택", "NO", "점포코드", "바코드", "도서명", "조사수량", "AREA", "SECTION",
-                    "서가번호", "단", "열", "날짜", "작업자")
+                    "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
         # [2026-09-23 정정] "SECTION" 헤더 글자가 안 잘리도록 폭을 늘렸다.
-        widths = (45, 45, 80, 120, 260, 70, 60, 95, 70, 45, 45, 90, 90)
+        widths = (45, 45, 80, 120, 260, 70, 60, 95, 70, 45, 45, 90, 90, 80)
         self.vt = VirtualTable(
             self, columns, headings, widths,
             lambda r: self._row_values(0, r, self._view_merged)[2:], height=20,
@@ -251,8 +251,10 @@ class PerformanceScreen(tk.Frame):
 
     def _row_values(self, no, r, merged):
         area = normalize_area(r["area"], merged=merged)
+        # [2026-10-15] 날짜/시간 칸은 조사일자가 아니라 실제로 스캔한 날짜(YYYYMMDD)와 시간(HH:MM:SS)을 보여준다.
+        scan_date, scan_time = split_scan_datetime(r["received_at"], r["survey_date"])
         return ("☐", no, r["store_code"], r["isbn"], r["book_name"], f"{r['qty'] or 0:,}", area, r["section"],
-                r["shelf_no"], r["dan"], r["yeol"], r["survey_date"], r["worker_name"])
+                r["shelf_no"], r["dan"], r["yeol"], r["worker_name"], scan_date, scan_time)
 
     def _delete_records(self, record_ids):
         """실사 데이터를 실제로 DB에서 지우고, 열려 있는 모든 표(맨 위 목록 + 조회 팝업들)에서도 반영한다."""
@@ -384,10 +386,10 @@ class PerformanceScreen(tk.Frame):
             self._apply_changes(changed_ids=[record_id])
 
         columns = ("check", "no", "store_code", "isbn", "book_name", "qty", "area", "section",
-                   "shelf_no", "dan", "yeol", "date", "worker")
+                   "shelf_no", "dan", "yeol", "worker", "date", "time")
         headings = ("선택", "NO", "점포코드", "바코드", "도서명", "조사수량", "AREA", "SECTION",
-                    "서가번호", "단", "열", "날짜", "작업자")
-        widths = (45, 45, 80, 120, 260, 70, 60, 95, 70, 45, 45, 90, 90)
+                    "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
+        widths = (45, 45, 80, 120, 260, 70, 60, 95, 70, 45, 45, 90, 90, 80)
         vt = VirtualTable(popup, columns, headings, widths,
                           lambda r: self._row_values(0, r, merged)[2:], height=18,
                           style_name="BigCheck.Treeview", on_loaded=on_loaded,
@@ -655,7 +657,7 @@ class PerformanceScreen(tk.Frame):
         if not rows:
             messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
             return
-        headers = ("점포코드", "바코드", "도서명", "조사수량", "AREA", "SECTION", "서가번호", "단", "열", "날짜", "작업자")
+        headers = ("점포코드", "바코드", "도서명", "조사수량", "AREA", "SECTION", "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
         path = export_rows_to_excel(rows, headers, default_name=f"실적관리_{today_str()}.xlsx", parent=self)
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")
