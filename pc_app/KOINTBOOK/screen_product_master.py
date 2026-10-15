@@ -122,12 +122,12 @@ class ProductMasterScreen(tk.Frame):
 
         # [2026-10-15] 미등록 상품(상품마스터에 없는 바코드) 입력 정책 - PDA 재고입력(전송 시 함께 전달)과
         # PC 실적관리 입력·수정이 같은 값을 쓴다. [PDA전송]은 그 오른쪽에 간격을 두고 둔다.
-        tk.Label(search_row, text="미등록상품", bg=CL_BG, fg=CL_TEXT_DIM).pack(side=tk.LEFT, padx=(90, 4))
+        tk.Label(search_row, text="미등록상품", bg=CL_BG, fg=CL_TEXT_DIM).pack(side=tk.LEFT, padx=(60, 4))
         self.cb_unreg = ttk.Combobox(search_row, values=dbmod.UNREG_POLICIES, state="readonly", width=11)
         self.cb_unreg.set(dbmod.get_unreg_policy())
         self.cb_unreg.pack(side=tk.LEFT)
         self.cb_unreg.bind("<<ComboboxSelected>>", lambda e: dbmod.set_setting("unreg_policy", self.cb_unreg.get()))
-        win_button(search_row, text="⬆ PDA전송", command=self.send_to_pda, kind="normal").pack(side=tk.LEFT, padx=(90, 4))
+        win_button(search_row, text="⬆ PDA전송", command=self.send_to_pda, kind="normal").pack(side=tk.LEFT, padx=(60, 4))
 
         columns = ("no", "kind", "isbn", "book_name", "category", "publisher", "ledger_qty", "real_qty", "missing_qty", "exception")
         headings = ("NO", "구분", "바코드", "도서명", "분야명", "출판사", "전산재고", "실재고", "누락재고", "예외여부")
