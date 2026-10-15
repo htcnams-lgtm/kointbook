@@ -394,3 +394,8 @@
 - PC 쪽 변경 없음(문구 납품은 서가번호를 쓰지 않고, 실적관리 서가번호 검사는 비어 있지 않고 11자리 이하면 통과). X는 위치키 구분자(-)와 겹치지 않아 선택.
 - 변경 파일: android_app/app/src/main/java/com/example/usbbridge/{AppState,LocationInputActivity,StockInputActivity}.kt, res/layout/activity_location_input.xml
 - 확인 필요: 실제 PDA에서 스위치 전환·엔터 이동·문구 저장(DATA 삭제/조회에서 AREA-SECTION-X로 보이는지).
+
+[2026-10-15 18차] PC 화면 정리 3건
+- 점포마스터 등록/수정/삭제 버튼을 아래쪽에서 위쪽 [조회] 옆으로 이동(작업자마스터와 같은 위치). screen_store_master.py
+- 자료생성 카드 이름 "문구 자료 (납품)" -> "문구 자료". screen_data_generate.py
+- PDA 설치 화면의 "내장 설치파일" 시각이 GitHub 서버 기준(UTC)이라 9시간 빠르게(11:45 -> 02:45) 찍히던 것을 한국 시각(KST)으로 고정. KOINTBOOK.spec

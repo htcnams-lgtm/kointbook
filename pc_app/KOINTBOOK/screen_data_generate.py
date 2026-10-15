@@ -97,7 +97,7 @@ class DataGenerateScreen(tk.Frame):
                        bg="white", anchor="w", fg=CL_TEXT_DIM).pack(fill=tk.X, padx=(48, 8))
         tk.Frame(fb, bg="white", height=6).pack()
 
-        fs, self.lbl_stat = card(1, "문구 자료 (납품)", self.var_do_stat)
+        fs, self.lbl_stat = card(1, "문구 자료", self.var_do_stat)
         for key, text in (("loc", "납품로케이션데이터.txt  (위치,바코드,수량)"),
                           ("det", "납품상세데이터.txt  (날짜,납품처,바코드,수량,구분,단가+종류+위치,페이지,줄,상품명)")):
             tk.Checkbutton(fs, text=text, variable=self.var_f[key], bg="white", anchor="w").pack(fill=tk.X, padx=(28, 8))
