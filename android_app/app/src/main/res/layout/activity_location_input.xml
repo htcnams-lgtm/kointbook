@@ -26,7 +26,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="18dp">
+        android:padding="12dp">
 
         <!-- 1. AREA -->
         <LinearLayout
@@ -34,7 +34,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="12dp">
+            android:layout_marginTop="0dp">
 
             <TextView
                 android:layout_width="76dp"
@@ -46,7 +46,7 @@
 
             <FrameLayout
                 android:layout_width="0dp"
-                android:layout_height="56dp"
+                android:layout_height="52dp"
                 android:layout_weight="1"
                 android:layout_marginStart="10dp"
                 android:background="@drawable/edit_classic"
@@ -88,7 +88,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="16dp">
+            android:layout_marginTop="10dp">
 
             <TextView
                 android:layout_width="76dp"
@@ -100,7 +100,7 @@
 
             <FrameLayout
                 android:layout_width="0dp"
-                android:layout_height="56dp"
+                android:layout_height="52dp"
                 android:layout_weight="1"
                 android:layout_marginStart="10dp"
                 android:background="@drawable/edit_classic"
@@ -141,12 +141,12 @@
         <TextView
             android:id="@+id/tvStationeryNote"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="20dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
             android:background="@drawable/box_green_note"
             android:gravity="center"
-            android:padding="12dp"
+            android:padding="0dp"
             android:text="문구로 입력됩니다."
             android:textStyle="bold"
             android:textColor="@color/focus_green"
@@ -160,8 +160,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="20dp">
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp">
 
             <TextView
                 android:layout_width="76dp"
@@ -173,7 +173,7 @@
 
             <FrameLayout
                 android:layout_width="0dp"
-                android:layout_height="56dp"
+                android:layout_height="52dp"
                 android:layout_weight="1"
                 android:layout_marginStart="10dp"
                 android:background="@drawable/edit_classic"
