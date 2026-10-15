@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/body_bg">
+
+    <include layout="@layout/title_bar" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:gravity="center_vertical">
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="위치" android:textStyle="bold" android:textColor="@color/text_primary" />
+
+        <Spinner
+            android:id="@+id/spLocation"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnQuery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/button_classic"
+            android:elevation="2dp"
+            android:textColor="#FFFFFF"
+            android:text="조회" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/bg_surface_alt"
+        android:padding="6dp">
+
+        <TextView android:id="@+id/tvHeadLoc" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="위치" android:gravity="center" android:textStyle="bold" android:textColor="#000000" />
+        <TextView android:id="@+id/tvHeadCount" android:layout_width="72dp" android:layout_height="wrap_content" android:text="건수" android:gravity="center" android:textStyle="bold" android:textColor="#000000" />
+        <TextView android:id="@+id/tvHeadQty" android:layout_width="72dp" android:layout_height="wrap_content" android:text="수량" android:gravity="center" android:textStyle="bold" android:textColor="#000000" />
+    </LinearLayout>
+
+    <!-- [2026-09-29] "물리방향키로 ... 목록으로 이동시 초록색테두리 포커스 안생김" -
+         ScrollView가 focusable 기본값 그대로 있으면 방향키 포커스가 목록 줄까지
+         제대로 안 들어가고 이 뷰 자신이 먼저 받아버릴 수 있어, 다른 화면들처럼
+         focusable="false"로 꺼둔다(실제 포커스는 llList 안의 각 줄이 갖는다). -->
+    <ScrollView
+        android:id="@+id/scrollList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:focusable="false"
+        android:descendantFocusability="beforeDescendants">
+
+        <LinearLayout
+            android:id="@+id/llList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/box_yellow"
+        android:padding="6dp">
+
+        <TextView
+            android:id="@+id/tvItemCount"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="ITEM: 0"
+            android:textColor="#000000"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvTotalQty"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="총수량: 0"
+            android:textColor="#000000"
+            android:textStyle="bold"
+            android:gravity="end" />
+    </LinearLayout>
+
+</LinearLayout>

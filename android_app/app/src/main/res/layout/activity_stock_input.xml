@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/body_bg">
+
+    <include layout="@layout/title_bar" />
+
+    <!-- [2026-10-01] "재고입력화면 화면 밑이 약간 짤림 / PDA 전체화면 최적화" - 예전엔 전체를
+         스크롤뷰로 감싸고 목록 높이를 148dp로 고정해서, 화면이 조금만 작아도 맨 아래 ITEM/총수량
+         줄이 화면 밖으로 밀려 잘렸다. 이제 위쪽 입력칸들은 필요한 만큼만 쓰고, 목록이 남은 높이를
+         전부 차지하며(기기 화면 크기에 맞춰 자동으로 늘고 줄어듦), ITEM/총수량 줄은 항상 맨 아래에
+         보인다. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <!-- 수동/자동 + 재고수정 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="1dp">
+
+                <RadioGroup
+                    android:id="@+id/rgMode"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal">
+
+                    <!-- [2026-09-30] "자동 수동 글씨크기도 굵게 수정" - textStyle="bold" 추가.
+                         [2026-09-30 추가] "수동,자동 글씨크기 2사이즈 크게" - 12 -> 14sp. -->
+                    <RadioButton
+                        android:id="@+id/rbManual"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#000000"
+                        android:background="@drawable/edit_inline_focus"
+                        android:padding="6dp"
+                        android:nextFocusDown="@+id/etBarcode"
+                        android:text="수동" />
+
+                    <RadioButton
+                        android:id="@+id/rbAuto"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#000000"
+                        android:background="@drawable/edit_inline_focus"
+                        android:padding="6dp"
+                        android:nextFocusDown="@+id/etBarcode"
+                        android:text="자동"
+                        android:checked="true" />
+                </RadioGroup>
+
+                <!-- [2026-09-30] "재고수정 버튼 터치로 불가하고 방향키로 선택,
+                     초록색테두리 포커스, 엔터버튼만 작동하게" - clickable을
+                     꺼서 터치로는 아예 눌리지 않게 했다(포커스 자체는 터치와
+                     무관하게 그대로 가능하고, button_secondary 배경이 이미
+                     포커스 시 진한 초록 테두리를 그려준다). 실제 동작은 이제
+                     StockInputActivity.kt의 dispatchKeyEvent에서 물리 엔터
+                     키(ENTER/NUMPAD_ENTER)로만 실행한다(터치도, DPAD 가운데
+                     키도 더 이상 실행되지 않는다). -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnGoEdit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="28dp"
+                    android:minHeight="0dp"
+                    android:background="@drawable/button_secondary"
+                    android:textColor="#000000"
+                    android:text="재고수정 Fn3"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:clickable="false"
+                    android:focusable="true"
+                    android:nextFocusDown="@+id/etBarcode"
+                    android:nextFocusUp="@+id/rbAuto"
+                    android:nextFocusLeft="@+id/rbAuto"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp" />
+            </LinearLayout>
+
+            <!-- LOC / 단 / 열
+                 [2026-09-30] "재고입력화면 LOC 입력칸 세로길이도 바코드
+                 입력칸과 같이 크게 해주고 단, 열도 마찬가지" - 이 줄의
+                 paddingTop/Bottom을 아래 바코드 줄과 같은 값(2dp)으로
+                 맞추고, 안쪽 padding도 4dp -> 5dp로 맞춰서 LOC/단/열 칸의
+                 실제 높이가 바코드 칸과 같아지게 했다.
+                 "LOC,단,열,바코드 입력값과 항목 글씨크기 1사이즈 크게" +
+                 (이후 추가 요청) "loc,단,열,바코드,수량 항목 제목 및
+                 입력값 1사이즈 크게" - 두 차례에 걸쳐 총 2사이즈씩 올랐다
+                 (위치 라벨/tvLoc: 12->14굵게, 단/열 라벨: 11->13,
+                 etDan/etYeol: 12->14). -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:gravity="center_vertical">
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="위치" android:textSize="14sp" android:textStyle="bold" android:textColor="#000000" />
+                <TextView
+                    android:id="@+id/tvLoc"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/edit_classic"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:paddingStart="3dp"
+                    android:paddingEnd="3dp"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:text="101" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="단" android:textSize="13sp" android:textColor="#000000" />
+                <EditText
+                    android:id="@+id/etDan"
+                    android:layout_width="26dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/edit_classic"
+                    android:inputType="number"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="2dp"
+                    android:textSize="15sp"
+                    android:textColor="#000000"
+                    android:nextFocusRight="@+id/etYeol"
+                    android:text="1" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="열" android:textSize="13sp" android:textColor="#000000" />
+                <EditText
+                    android:id="@+id/etYeol"
+                    android:layout_width="26dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="3dp"
+                    android:background="@drawable/edit_classic"
+                    android:inputType="number"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="2dp"
+                    android:textSize="15sp"
+                    android:textColor="#000000"
+                    android:nextFocusDown="@+id/etBarcode"
+                    android:text="1" />
+            </LinearLayout>
+
+            <!-- 바코드 / 수량 / 상품명(같은 줄에 작게) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:gravity="center_vertical">
+
+                <!-- [2026-09-30] "바코드 글씨를 헤더 바코드 글씨크기와 굵기와
+                     동일하게" + 두 차례의 "1사이즈 크게" 요청으로 총
+                     11->14sp+굵게. -->
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="바코드" android:textSize="14sp" android:textStyle="bold" android:textColor="#000000" />
+                <EditText
+                    android:id="@+id/etBarcode"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="5dp"
+                    android:layout_marginEnd="5dp"
+                    android:background="@drawable/edit_classic"
+                    android:padding="5dp"
+                    android:imeOptions="actionDone"
+                    android:nextFocusUp="@+id/rbAuto"
+                    android:nextFocusRight="@+id/etQty"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000" />
+
+                <!-- [2026-09-30] "수량입력칸도 동일하게"(헤더와 맞춰 굵게) +
+                     "loc,단,열,바코드,수량 항목 제목 및 입력값 1사이즈 크게" -
+                     12 -> 13sp, 굵게. -->
+                <EditText
+                    android:id="@+id/etQty"
+                    android:layout_width="46dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="3dp"
+                    android:background="@drawable/edit_classic"
+                    android:inputType="number"
+                    android:padding="5dp"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusUp="@+id/etBarcode"
+                    android:hint="수량"
+                    android:textColorHint="@color/text_secondary" />
+            </LinearLayout>
+
+            <!-- 상품명 : 라벨 없이 한 줄로 작게
+                 [2026-09-30] "재고입력화면 바코드 입력칸 밑 상품명 매칭칸
+                 글자 1사이즈 크고 굵고 검은색으로" - 11sp -> 12sp, 굵게
+                 (검은색은 이미 적용되어 있었음). -->
+            <TextView
+                android:id="@+id/tvProductName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginBottom="2dp"
+                android:background="@color/bg_surface"
+                android:padding="4dp"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="" />
+
+            <!-- 목록 헤더 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@color/bg_surface_alt"
+                android:padding="5dp">
+
+                <!-- [2026-09-29] "바코드 항목 내용이 ...으로 변경되지않게 너비 넓힘,
+                     대신 위치항목과 수량항목 너비를 조금씩 축소" - 바코드(ISBN 13자리)가
+                     잘려서 "..."로 보이는 일이 잦아, 위치/수량 너비를 조금씩 줄이고
+                     그만큼을 바코드 쪽에 몰아줬다(도서명은 그대로). 아래 목록 줄
+                     (StockInputActivity.kt의 cell() 호출부)도 반드시 같은 비율로
+                     맞춰야 헤더와 실제 줄의 칸 경계가 어긋나지 않는다. -->
+                <TextView android:layout_width="0dp" android:layout_weight="0.8" android:layout_height="wrap_content" android:text="위치" android:textSize="12sp" android:textStyle="bold" android:textColor="#000000" android:gravity="center" />
+                <TextView android:layout_width="0dp" android:layout_weight="2.6" android:layout_height="wrap_content" android:text="바코드" android:textSize="12sp" android:textStyle="bold" android:textColor="#000000" android:gravity="center" />
+                <TextView android:layout_width="0dp" android:layout_weight="2" android:layout_height="wrap_content" android:text="도서명" android:textSize="12sp" android:textStyle="bold" android:textColor="#000000" android:gravity="center" />
+                <TextView android:layout_width="0dp" android:layout_weight="0.6" android:layout_height="wrap_content" android:text="수량" android:textSize="12sp" android:textStyle="bold" android:textColor="#000000" android:gravity="center" />
+            </LinearLayout>
+
+            <!-- 실사 데이터 목록 : 위 입력칸과 아래 ITEM/총수량 줄을 뺀 남은 높이를 전부 쓴다 (내용이 더 많으면 이 안에서만 스크롤) -->
+            <ScrollView
+                android:id="@+id/scrollList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="72dp"
+                android:focusable="false"
+                android:descendantFocusability="beforeDescendants">
+
+                <LinearLayout
+                    android:id="@+id/llList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </ScrollView>
+
+            <!-- ITEM / 총수량 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@drawable/box_yellow"
+                android:padding="6dp">
+
+                <!-- [2026-09-30] "재고입력 하단 ITEM:, 총수량 줄 글자,숫자 크기를
+                     1사이즈 크게" - 13sp -> 14sp. -->
+                <TextView
+                    android:id="@+id/tvItemCount"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="ITEM: 0"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvTotalQty"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="총수량: 0"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:textSize="14sp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

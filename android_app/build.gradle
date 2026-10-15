@@ -1,0 +1,20 @@
+// Top-level build file
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22'
+        // KOINTBOOK은 Firebase/클라우드 동기화를 쓰지 않는다 (USB adb만 사용) - 그래서
+        // ZZOINT에 있던 google-services 플러그인은 여기서는 넣지 않았다.
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}

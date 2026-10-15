@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  [2026-09-23] PDA 초기화면(스플래시) 날짜 위에 있던 "쪼인트" 이미지
+  (jjoint_hires.png) 대신 넣은 아이콘. 사각 틀 안에 높이가 서로 다른
+  직사각형("책")을 꽂아놓은 서가(책장) 모양으로, 가운데 책 한 권만 살짝
+  기울여서 딱딱한 격자가 아니라 실제 책장처럼 자연스러운 느낌을 준다
+  (사용자가 고른 "5번" 시안 - koint_book_splash_bookshelf_variants.html 참고).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="150dp"
+    android:height="90dp"
+    android:viewportWidth="150"
+    android:viewportHeight="90">
+
+    <!-- 바깥 사각 틀 -->
+    <path
+        android:pathData="M10,10 L140,10 L140,70 L10,70 Z"
+        android:strokeColor="@color/accent"
+        android:strokeWidth="4"
+        android:fillColor="#00000000" />
+
+    <!-- 책 1 -->
+    <path android:pathData="M18,20 L27,20 L27,64 L18,64 Z" android:fillColor="@color/accent" />
+    <!-- 책 2 -->
+    <path android:pathData="M30,24 L38,24 L38,64 L30,64 Z" android:fillColor="@color/brand_gold" />
+    <!-- 책 3 -->
+    <path android:pathData="M41,18 L51,18 L51,64 L41,64 Z" android:fillColor="@color/accent" />
+
+    <!-- 책 4 - 살짝 기울어진 책 (중심 62,50 기준 -13도 회전) -->
+    <group
+        android:pivotX="62"
+        android:pivotY="50"
+        android:rotation="-13">
+        <path android:pathData="M57,26 L67,26 L67,68 L57,68 Z" android:fillColor="@color/brand_gold" />
+    </group>
+
+    <!-- 책 5 -->
+    <path android:pathData="M80,22 L89,22 L89,64 L80,64 Z" android:fillColor="@color/accent" />
+    <!-- 책 6 -->
+    <path android:pathData="M92,28 L99,28 L99,64 L92,64 Z" android:fillColor="@color/accent" />
+    <!-- 책 7 -->
+    <path android:pathData="M102,16 L113,16 L113,64 L102,64 Z" android:fillColor="@color/brand_gold" />
+    <!-- 책 8 -->
+    <path android:pathData="M116,26 L124,26 L124,64 L116,64 Z" android:fillColor="@color/accent" />
+    <!-- 책 9 -->
+    <path android:pathData="M127,20 L134,20 L134,64 L127,64 Z" android:fillColor="@color/accent" />
+
+</vector>

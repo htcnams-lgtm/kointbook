@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 목록의 한 줄이 방향키로 선택(포커스)되었을 때 씌우는 초록 테두리 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/transparent" />
+    <stroke android:width="3dp" android:color="@color/focus_green" />
+    <corners android:radius="6dp" />
+</shape>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [2026-09-23] KOINTBOOK 앱 아이콘(5번 - 책 크게 키운 버전) 어댑티브 아이콘
+     배경 레이어. 캔버스 전체(108x108)를 아이보리색으로 채운다 - 실제 모양(원형/
+     둥근 사각형/사각형 등)은 런처(OS)가 마스크로 잘라서 만든다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z"
+        android:fillColor="#F4F2EC" />
+</vector>

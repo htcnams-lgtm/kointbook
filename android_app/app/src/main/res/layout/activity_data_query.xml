@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/body_bg">
+
+    <include layout="@layout/title_bar" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:gravity="center_vertical">
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="위치" android:textStyle="bold" android:textColor="@color/text_primary" />
+
+        <Spinner
+            android:id="@+id/spLocation"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnQuery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/button_classic"
+            android:elevation="2dp"
+            android:textColor="#FFFFFF"
+            android:text="조회" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/bg_surface_alt"
+        android:padding="6dp">
+
+        <TextView android:layout_width="36dp" android:layout_height="wrap_content" android:text=" " />
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="위치" android:gravity="center" android:textStyle="bold" android:textColor="#000000" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/llList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <!-- [2026-09-30] "DATA 조회 전체삭제, 선택삭제 버튼 크기와 정렬위치를
+         재고수정화면 선택삭제, 수정완료 버튼과 똑같게" - activity_stock_edit.xml의
+         btnDeleteSelected/btnComplete 버튼 행과 동일한 스타일(32dp 높이,
+         minHeight 0, 상하 패딩 0, 12sp, 둘 사이 16dp 간격, 바깥 상하 패딩 3dp). -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnDeleteAll"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="32dp"
+            android:layout_marginEnd="16dp"
+            android:minHeight="0dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:background="@drawable/button_classic"
+            android:elevation="2dp"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:text="전체삭제" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnDeleteSelected"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="32dp"
+            android:minHeight="0dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:background="@drawable/button_classic"
+            android:elevation="2dp"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:text="선택삭제" />
+    </LinearLayout>
+
+</LinearLayout>

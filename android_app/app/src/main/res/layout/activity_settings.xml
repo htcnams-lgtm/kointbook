@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_main">
+
+    <include layout="@layout/title_bar" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <!-- IP 설정 그룹 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="IP 설정"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:background="@drawable/edit_classic"
+                android:layout_marginBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="IP  "
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/etIp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/edit_inline_focus"
+                    android:padding="4dp"
+                    android:inputType="text"
+                    android:textColor="@color/text_primary"
+                    android:text="10.10.10.10"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- [2026-09-30] "환경설정 화면 시간 설정 항목 및 내용을 없애고
+                 비밀번호설정 버튼이 바로 보이게" - 시간 설정 그룹(기기 날짜/시각
+                 표시)을 통째로 제거해서, IP 설정 바로 아래에 비밀번호설정 버튼이
+                 바로 보이게 했다. -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnPasswordSetting"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/button_secondary"
+                android:textColor="@color/text_primary"
+                android:text="비밀번호설정" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="18dp"
+        android:paddingTop="0dp">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnCancel"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:background="@drawable/button_secondary"
+            android:text="취소"
+            android:textColor="@color/danger_red"
+            android:layout_marginEnd="8dp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnSave"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:background="@drawable/button_classic"
+            android:elevation="2dp"
+            android:textColor="#FFFFFF"
+            android:text="저장"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 위험/종료 버튼: 빨간 채움 + 각진 모서리(Windows 11 스타일). 포커스 시 진한 초록 테두리.
+     [2026-09-23 정정] 모서리 반경이 14dp라서 PDA 초기화면의 다른 버튼(button_classic,
+     6dp)보다 훨씬 둥글게 보이던 문제 - button_classic과 똑같이 6dp로 맞췄다. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape>
+            <solid android:color="#B32A2A" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+    <item android:state_focused="true">
+        <shape>
+            <solid android:color="@color/danger_red" />
+            <stroke android:width="3dp" android:color="@color/focus_green" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+    <item>
+        <shape>
+            <solid android:color="@color/danger_red" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+</selector>

@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.example.usbbridge'
+    compileSdk 34
+
+    defaultConfig {
+        // [2026-09-24 정정] 예전에는 ZZOINT와 같은 값(com.example.usbbridge)을
+        // 그대로 썼는데, 그러면 같은 기기(PDA)에 ZZOINT 앱과 KOINTBOOK 앱을
+        // 동시에 설치할 수 없다(안드로이드가 같은 앱으로 취급해서 하나가 다른
+        // 하나를 덮어씀) - 한 PC/한 PDA를 ZZOINT와 별도로 운영하기 위해 고유한
+        // 값으로 바꿨다. namespace는 소스 파일들의 package 선언과 맞춰야 해서
+        // 그대로 두고(Kotlin 파일을 옮길 필요 없음), applicationId만 바꾸면
+        // 된다. PC(adb_utils.py)의 PACKAGE_NAME/DEVICE_FILES_DIR도 반드시 이
+        // 값과 똑같이 맞춰야 한다(adb pull/push 대상 경로가 이 패키지명 기준).
+        applicationId "com.kointbook.app"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    // [2026-10-06] 빌드되는 APK 파일 이름을 항상 KOINTBOOK.apk로 만든다
+    // (debug: app/build/outputs/apk/debug/KOINTBOOK.apk, release도 같은 이름).
+    // PC 프로그램(pc_app/apk 폴더)에 넣어 PDA 앱 설치에 쓰는 파일 이름과 맞추기 위함.
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "KOINTBOOK.apk"
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    // KOINTBOOK은 현장에서 USB(adb)로만 PC와 데이터를 주고받으므로, ZZOINT에 있던
+    // Firebase/Firestore(무선 전송) 의존성은 넣지 않았다.
+}

@@ -1,0 +1,29 @@
+# KOINTBOOK 저장소에 올리지 않는 파일
+# (빌드할 때마다 새로 생기는 파일, PC/PDA 실사 데이터, 각 PC 전용 설정)
+
+# 안드로이드 스튜디오 / Gradle 빌드 결과
+android_app/.gradle/
+android_app/.idea/
+android_app/build/
+android_app/app/build/
+android_app/local.properties
+android_app/captures/
+*.iml
+
+# 파이썬 캐시
+__pycache__/
+*.pyc
+
+# PyInstaller exe 만들 때 생기는 폴더
+pc_app/build/
+pc_app/dist/
+
+# exe 안에 넣을 APK(빌드 결과물이라 저장소에는 안 넣음)
+pc_app/apk/*.apk
+
+# PC 프로그램 실행 중 생기는 파일(실사 DB, 오류 기록)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+pc_app/error_log.txt

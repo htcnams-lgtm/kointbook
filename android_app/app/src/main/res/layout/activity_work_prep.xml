@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_main">
+
+    <include layout="@layout/title_bar" />
+
+    <!-- 화면이 작아서 다 안 들어갈 때만 스크롤되고, 다 들어가면 그냥 꽉 차 보인다 -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:scrollbars="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
+
+            <!-- 매장 (점포코드 / 점포명)
+                 [2026-09-30] "점포코드/ 점포명 항목 제목 , 작업자 항목제목
+                 1사이즈 크고 굵게" - 12sp -> 13sp, 굵게 추가. -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="점포코드 / 점포명" android:textSize="13sp" android:textStyle="bold" android:textColor="@color/text_secondary"
+                android:layout_marginBottom="2dp" />
+            <TextView
+                android:id="@+id/tvStore"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/edit_classic"
+                android:paddingStart="9dp"
+                android:paddingEnd="9dp"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
+                android:textSize="14sp"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="4dp"
+                android:text="KOINTBOOK / KOINTBOOK" />
+
+            <!-- 작업자 -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="작업자" android:textSize="13sp" android:textStyle="bold" android:textColor="@color/text_secondary"
+                android:layout_marginBottom="2dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@drawable/edit_classic"
+                android:paddingStart="9dp"
+                android:paddingEnd="9dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:layout_marginBottom="4dp">
+
+                <EditText
+                    android:id="@+id/etWorkerCode"
+                    android:layout_width="76dp"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/edit_inline_focus"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:hint="번호"
+                    android:textColorHint="@color/text_secondary"
+                    android:inputType="number"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvWorkerName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:paddingStart="8dp"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent" />
+            </LinearLayout>
+
+            <!-- 품목수량 + 다음 버튼(작게, 바로 옆) -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="품목수량" android:textSize="12sp" android:textColor="@color/text_secondary"
+                android:layout_marginBottom="2dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+
+                <TextView
+                    android:id="@+id/tvItemCount"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/edit_classic"
+                    android:paddingStart="9dp"
+                    android:paddingEnd="9dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:text="0" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnGoToMenu"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:background="@drawable/button_classic"
+                    android:elevation="2dp"
+                    android:textColor="#FFFFFF"
+                    android:text="다음"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" />
+            </LinearLayout>
+
+            <!-- 마스터 수신 : 항상 눈에 띄는 카드, 버튼 크기는 축소 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/edit_classic"
+                android:padding="8dp"
+                android:layout_marginBottom="4dp">
+
+                <!-- [2026-09-30] "받은 마스터: 상품 N건 글자크기 2사이즈 크게" -
+                     12sp -> 14sp (마스터 수신 대기 문구도 같은 뷰를 공유). -->
+                <TextView
+                    android:id="@+id/tvMasterReceiveStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginBottom="4dp"
+                    android:text="PC에서 마스터 전송을 기다리는 중..." />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <!-- [2026-09-30] "마스터 수신 버튼 , 초기화버튼 ... 2사이즈
+                         크고 굵게" - 12sp -> 14sp, 굵게. -->
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnMasterReceive"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="36dp"
+                        android:background="@drawable/button_classic"
+                        android:elevation="2dp"
+                        android:textColor="#FFFFFF"
+                        android:text="⬇ 마스터 수신"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginEnd="6dp" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnMasterReset"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="36dp"
+                        android:background="@drawable/button_secondary"
+                        android:textColor="@color/danger_red"
+                        android:text="초기화"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

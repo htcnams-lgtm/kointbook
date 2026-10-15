@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/body_bg">
+
+    <include layout="@layout/title_bar" />
+
+    <!-- [2026-09-30] "loc입력칸 세로 살짝줄이고 바코드 입력칸 세로 살짝늘려서
+         둘이 세로 길이가 동일하게 변경 그 줄에 있는 다른칸도 동일하게" - 예전엔
+         이 줄(LOC/단/열) 컨테이너가 padding="10dp"(위아래 10dp)였고, 아래 바코드
+         줄 컨테이너는 paddingBottom="6dp"만 있어 위쪽 여백이 0dp였다 - 그래서
+         두 줄의 실제 높이가 서로 달라 보였다. 두 줄 다 paddingTop/Bottom을
+         "6dp"로 맞춰 높이를 통일한다(LOC 줄은 10dp->6dp로 살짝 줄고, 바코드
+         줄은 0dp->6dp로 살짝 늘어난다). -->
+    <!-- [2026-09-30] "상단 ZZOINT[재고수정] 세로 길이를 20%정도 크게 ...
+         밑에 LOC입력칸과 사이 간격도 좀더 줄여서 목록에 3줄이 온전히
+         잘보이도록" - 타이틀바가 45dp->54dp로 커진 만큼, 이 화면 안의
+         다른 여백들을 조금씩 줄여서 목록에 쓸 세로 공간을 다시 확보했다
+         (이 줄 paddingTop/Bottom 6dp -> 4dp). -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:gravity="center_vertical">
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LOC" android:textSize="14sp" android:textStyle="bold" android:textColor="#000000" />
+        <!-- "loc입력칸, 바코드 입력칸 글자크기 1사이즈 크게" - 별도 textSize
+             지정이 없어 기본 크기로 나오던 것을 15sp로 명시했다(바코드 칸과
+             동일). -->
+        <EditText
+            android:id="@+id/etLoc"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/edit_classic"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:paddingStart="3dp"
+            android:paddingEnd="3dp"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:maxLines="1"
+            android:imeOptions="actionNext" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="단" android:textSize="13sp" android:textColor="#000000" />
+        <TextView
+            android:id="@+id/etDan"
+            android:layout_width="26dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/edit_classic"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:textSize="15sp"
+            android:textColor="#000000" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="열" android:textSize="13sp" android:textColor="#000000" />
+        <TextView
+            android:id="@+id/etYeol"
+            android:layout_width="26dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/edit_classic"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:textSize="15sp"
+            android:textColor="#000000" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:gravity="center_vertical">
+
+        <!-- [2026-09-29] "기본포커스는 바코드 입력칸이고 물리스캔 버튼으로
+             스캔시에도 입력하고 엔터친 효과로" - 원래 스캔 결과만 표시하던
+             읽기전용 칸(TextView)을, 직접 타이핑도 가능한 입력칸(EditText)으로
+             바꿨다. 화면에 들어오면 기본 포커스가 여기로 가고, 엔터를 치면
+             그 자리에서 바로 조회한다(StockEditActivity.kt의 confirmIsbn 참고).
+
+             [2026-09-30] "수정버튼 삭제" - 아래에 있던 [수정] 버튼을 완전히
+             없앴다(목록에서 엔터->수량칸 이동->엔터로 바로 수정되는 흐름으로
+             대체 - StockEditActivity.kt 참고). 버튼이 있던 자리가 없어진 만큼
+             바코드 칸 weight를 3으로 늘렸다. -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="바코드" android:textSize="14sp" android:textStyle="bold" android:textColor="#000000" />
+        <EditText
+            android:id="@+id/etBarcode"
+            android:layout_width="0dp"
+            android:layout_weight="3"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/edit_classic"
+            android:padding="6dp"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:maxLines="1"
+            android:imeOptions="actionDone" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="수량" android:textSize="14sp" android:textStyle="bold" android:textColor="#000000" />
+        <EditText
+            android:id="@+id/etEditQty"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/edit_classic"
+            android:padding="6dp"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:inputType="number"
+            android:imeOptions="actionDone" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:layout_marginBottom="3dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvProductName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/bg_surface"
+            android:padding="4dp"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="" />
+    </LinearLayout>
+
+    <!-- [2026-09-30] "선택체크박스항목을 없애는대신 ... 위치 쪽만 터치해야
+         선택되고" - 선택용 체크박스 칸(L)을 완전히 없앴다. "위치" 칸이 이제
+         선택(초록 V 표시) 역할까지 겸하므로, 헤더도 activity_stock_input.xml의
+         목록 헤더(위치/바코드/도서명/수량, weight 0.8/2.6/2/0.6)와 완전히
+         똑같은 구성이 됐다. -->
+    <!-- [2026-09-30] "위치 터치 체크 범위를 개선해야될거같은데 잘 안눌려서
+         선택이 잘안됨" - 위치 칸을 0.8 -> 1.1로 조금 넓혀 터치하기 쉽게 하고,
+         그만큼 도서명 칸을 2 -> 1.7로 줄였다(StockEditActivity.kt의 목록 줄
+         구성과 같은 비율로 맞췄다). -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/bg_surface_alt"
+        android:padding="4dp">
+
+        <TextView android:layout_width="0dp" android:layout_weight="0.8" android:layout_height="wrap_content" android:text="위치" android:textSize="12sp" android:textStyle="bold" android:textColor="#000000" android:gravity="center" />
+        <TextView android:layout_width="0dp" android:layout_weight="2.6" android:layout_height="wrap_content" android:text="바코드" android:textSize="12sp" android:textStyle="bold" android:textColor="#000000" android:gravity="center" />
+        <TextView android:layout_width="0dp" android:layout_weight="2" android:layout_height="wrap_content" android:text="도서명" android:textSize="12sp" android:textStyle="bold" android:textColor="#000000" android:gravity="center" />
+        <TextView android:layout_width="0dp" android:layout_weight="0.6" android:layout_height="wrap_content" android:text="수량" android:textSize="12sp" android:textStyle="bold" android:textColor="#000000" android:gravity="center" />
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/scrollList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:focusable="false"
+        android:descendantFocusability="beforeDescendants">
+
+        <LinearLayout
+            android:id="@+id/llList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/box_yellow"
+        android:padding="6dp">
+
+        <!-- [2026-09-30] "ITEM 값 총수량값 숫자 1사이즈 크게" - 13sp -> 14sp. -->
+        <TextView
+            android:id="@+id/tvItemCount"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="ITEM: 0"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvTotalQty"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="총수량: 0"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:textSize="14sp"
+            android:gravity="end" />
+    </LinearLayout>
+
+    <!-- [2026-09-30] "선택삭제,수정완료 버튼 크기를 줄이고 특히 세로길이를
+         많이 줄이고" - 46dp -> 32dp로 줄이고, minHeight/패딩도 다른 화면의
+         작은 버튼들(예: btnApplyQty였던 것)과 같은 방식으로 눌러서 실제
+         버튼 자체 높이가 줄어들게 했다. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp">
+
+        <!-- [2026-09-30] "선택삭제 수정완료 버튼 사이를 두칸 띄어지게" -
+             4dp -> 16dp. -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnDeleteSelected"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="32dp"
+            android:layout_marginEnd="16dp"
+            android:minHeight="0dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:background="@drawable/button_classic"
+            android:elevation="2dp"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:text="선택삭제" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnComplete"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="32dp"
+            android:minHeight="0dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:background="@drawable/button_classic"
+            android:elevation="2dp"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:text="수정완료"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [2026-09-23] KOINTBOOK 앱 아이콘(5번 - 책 크게 키운 버전) 어댑티브 아이콘
+     전경 레이어. 108x108 캔버스 중앙의 안전영역(지름 66dp 원) 안에 책 그림이
+     오도록 translate(14.69,32.10) scale(0.5172)로 배치했다(원래 96x96
+     icon-space 디자인과 같은 좌표/색을 쓰고 크기만 안전영역에 맞게 축소). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="14.69"
+        android:translateY="32.1"
+        android:scaleX="0.5172"
+        android:scaleY="0.5172">
+        <path android:pathData="M18,20 L27,20 L27,64 L18,64 Z" android:fillColor="#172C5E" />
+        <path android:pathData="M30,24 L38,24 L38,64 L30,64 Z" android:fillColor="#B08D3E" />
+        <path android:pathData="M41,18 L51,18 L51,64 L41,64 Z" android:fillColor="#172C5E" />
+        <group android:pivotX="62" android:pivotY="50" android:rotation="-13">
+            <path android:pathData="M57,26 L67,26 L67,68 L57,68 Z" android:fillColor="#B08D3E" />
+        </group>
+        <path android:pathData="M80,22 L89,22 L89,64 L80,64 Z" android:fillColor="#172C5E" />
+        <path android:pathData="M92,28 L99,28 L99,64 L92,64 Z" android:fillColor="#172C5E" />
+        <path android:pathData="M102,16 L113,16 L113,64 L102,64 Z" android:fillColor="#B08D3E" />
+        <path android:pathData="M116,26 L124,26 L124,64 L116,64 Z" android:fillColor="#172C5E" />
+        <path android:pathData="M127,20 L134,20 L134,64 L127,64 Z" android:fillColor="#172C5E" />
+    </group>
+</vector>

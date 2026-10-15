@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- KOINTBOOK은 USB(adb pull/push) 파일 기반으로만 통신하므로 인터넷 권한이 필요 없다
+         (원본 ZZOINT는 Firebase 무선 전송을 위해 이 권한을 남겨두었었다). -->
+
+    <!-- [2026-09-30] "미등록 팝업창 경고음 ... 진동까지 추가" - 미등록 바코드
+         경고 팝업에서 짧은 진동을 함께 주기 위한 권한(SoundUtil.kt 참고). -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".KointBookApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="KOINTBOOK"
+        android:theme="@style/Theme.UsbBridge"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:label="KOINTBOOK">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".SettingsActivity" android:exported="false"
+            android:windowSoftInputMode="stateHidden" />
+        <activity android:name=".WorkPrepActivity" android:exported="false"
+            android:windowSoftInputMode="stateHidden" />
+        <activity android:name=".MenuActivity" android:exported="false" />
+        <activity android:name=".LocationInputActivity" android:exported="false"
+            android:windowSoftInputMode="stateHidden" />
+        <activity android:name=".StockInputActivity" android:exported="false"
+            android:windowSoftInputMode="stateHidden" />
+        <activity android:name=".StockEditActivity" android:exported="false"
+            android:windowSoftInputMode="stateHidden" />
+        <activity android:name=".DataManageActivity" android:exported="false" />
+        <activity android:name=".DataQueryActivity" android:exported="false" />
+        <activity android:name=".SectionQueryActivity" android:exported="false" />
+
+    </application>
+
+</manifest>

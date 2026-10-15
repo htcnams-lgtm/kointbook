@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 화이트 톤 + 진한 남색 액센트 팔레트 -->
+    <color name="bg_main">#FFFFFF</color>
+    <color name="bg_surface">#F4F5F9</color>
+    <color name="bg_surface_alt">#E9EBF2</color>
+    <color name="border_subtle">#D8DAE3</color>
+
+    <color name="text_primary">#1B1D28</color>
+    <color name="text_secondary">#36373E</color>
+    <color name="text_disabled">#AEB1BD</color>
+
+    <color name="accent">#172C5E</color>
+    <color name="accent_pressed">#10204A</color>
+    <color name="accent_yellow">#FFD23F</color>
+    <!-- [2026-09-23] 스플래시 화면 책장 로고(ic_splash_bookshelf)에 쓰는 골드 포인트색 -->
+    <color name="brand_gold">#B08D3E</color>
+    <color name="focus_green">#0B7A34</color>
+    <color name="accent_button_border">#3A4A78</color>
+    <color name="danger_red">#D93636</color>
+    <color name="success_green">#1FA05C</color>
+
+    <!-- 구 버전 호환용 alias (이전 코드에서 참조) -->
+    <color name="title_bar_bg">#FFFFFF</color>
+    <color name="title_bar_text">#1B1D28</color>
+    <color name="body_bg">#FFFFFF</color>
+    <color name="button_face">#F4F5F9</color>
+    <color name="button_border">#D8DAE3</color>
+    <color name="highlight_yellow">#F4F5F9</color>
+    <color name="highlight_yellow_border">#D8DAE3</color>
+    <color name="taskbar_bg">#FFFFFF</color>
+    <color name="row_alt">#F4F5F9</color>
+    <color name="header_orange">#E9EBF2</color>
+    <color name="grid_border">#D8DAE3</color>
+</resources>

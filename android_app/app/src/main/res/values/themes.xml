@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 화이트 톤 라이트 테마 -->
+    <style name="Theme.UsbBridge" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg_main</item>
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryDark">@color/accent_pressed</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="colorSurface">@color/bg_surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
+        <item name="android:editTextColor">@color/text_primary</item>
+        <item name="colorControlNormal">@color/text_secondary</item>
+        <item name="colorControlActivated">@color/accent</item>
+    </style>
+
+    <!-- AlertDialog가 항상 화이트 톤 + 진한 글자로 뜨도록 강제하는 테마 -->
+    <style name="KointBookDialog" parent="Theme.MaterialComponents.Light.Dialog.Alert">
+        <item name="colorSurface">@color/bg_main</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
+        <item name="android:editTextColor">@color/text_primary</item>
+        <item name="buttonBarPositiveButtonStyle">@style/KointBookDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/KointBookDialogButton</item>
+    </style>
+
+    <style name="KointBookDialogButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/accent</item>
+        <item name="android:background">@drawable/edit_inline_focus</item>
+    </style>
+</resources>
