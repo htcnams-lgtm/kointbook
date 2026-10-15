@@ -471,15 +471,6 @@ def _install_apk_inner(apk_path: str):
     try:
         result = _run(["install", "-r", "-d", "-t", apk_path], timeout=90)
         out = ((result.stdout or "") + "\n" + (result.stderr or "")).strip()
-        # [2026-10-15] 새 버전을 처음 설치할 때만 "서명이 다르다(UPDATE_INCOMPATIBLE)"로 실패하고, 같은 파일로
-        # 한 번 더 설치하면 성공하는 현상이 확인되었다(서명은 실제로 같음). 사용자에게 삭제 후 재설치를
-        # 묻기 전에 자동으로 한 번 더 시도한다.
-        if "Success" not in (result.stdout or "") and (
-                "UPDATE_INCOMPATIBLE" in out or "signatures do not match" in out):
-            import time
-            time.sleep(2)
-            result = _run(["install", "-r", "-d", "-t", apk_path], timeout=90)
-            out = ((result.stdout or "") + "\n" + (result.stderr or "")).strip()
         return ("Success" in (result.stdout or "")), out
     except subprocess.TimeoutExpired:
         pass

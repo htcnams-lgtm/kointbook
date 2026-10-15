@@ -151,28 +151,26 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="vertical">
 
                     <!-- [2026-09-30] "마스터 수신 버튼 , 초기화버튼 ... 2사이즈
                          크고 굵게" - 12sp -> 14sp, 굵게. -->
                     <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnMasterReceive"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="46dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
                         android:background="@drawable/button_classic"
                         android:elevation="2dp"
                         android:textColor="#FFFFFF"
                         android:text="⬇ 마스터 수신"
                         android:textSize="17sp"
                         android:textStyle="bold"
-                        android:layout_marginEnd="6dp" />
+                        android:layout_marginBottom="10dp" />
 
                     <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnMasterReset"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="46dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
                         android:background="@drawable/button_secondary"
                         android:textColor="@color/danger_red"
                         android:text="초기화"

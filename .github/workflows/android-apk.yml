@@ -41,6 +41,9 @@ jobs:
           if [ -n "$DEBUG_KEYSTORE_B64" ]; then
             mkdir -p "$HOME/.android"
             printf '%s' "$DEBUG_KEYSTORE_B64" | base64 -d > "$HOME/.android/debug.keystore"
+            # [2026-10-15] gradle이 이 파일을 안 쓰고 매번 새 키로 서명하던 것으로 보여, build.gradle의
+            # signingConfigs.debug가 KOINT_KEYSTORE 경로를 직접 쓰게 한다.
+            echo "KOINT_KEYSTORE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
             echo "SIGN_NOTE=PC와 같은 서명(덮어 설치 가능)" >> "$GITHUB_ENV"
           else
             echo "SIGN_NOTE=임시 서명(이미 설치된 PDA 앱 위에는 덮어 설치 안 됨, 빌드 확인용)" >> "$GITHUB_ENV"
@@ -56,11 +59,28 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # APK가 Secrets의 키로 서명됐는지 확인한다(다르면 빌드를 실패시켜 잘못된 파일이 나가지 않게 한다).
+      - name: 서명 확인
+        run: |
+          APK_FP=$(keytool -printcert -jarfile app/build/outputs/apk/debug/KOINTBOOK.apk 2>/dev/null | grep 'SHA256:' | head -1 | sed 's/.*SHA256: *//')
+          echo "APK_FP=$APK_FP" >> "$GITHUB_ENV"
+          if [ -n "$KOINT_KEYSTORE" ]; then
+            KEY_FP=$(keytool -list -v -keystore "$KOINT_KEYSTORE" -storepass android 2>/dev/null | grep 'SHA256:' | head -1 | sed 's/.*SHA256: *//')
+            echo "KEY_FP=$KEY_FP" >> "$GITHUB_ENV"
+            if [ -z "$KEY_FP" ] || [ "$KEY_FP" != "$APK_FP" ]; then
+              echo "::error::APK 서명($APK_FP)이 Secrets 키($KEY_FP)와 다릅니다."
+              exit 1
+            fi
+          else
+            echo "KEY_FP=(Secrets 키 없음)" >> "$GITHUB_ENV"
+          fi
+
       - name: 결과 요약
         run: |
           {
             echo "### KOINTBOOK.apk 빌드 성공"
             echo "- 서명: $SIGN_NOTE"
+            echo "- 키 파일 지문: $KEY_FP"
             echo "- 서명 지문(SHA-256, PDA에 깔린 앱과 같은 키인지 비교용): $(keytool -printcert -jarfile app/build/outputs/apk/debug/KOINTBOOK.apk 2>/dev/null | grep 'SHA256:' | head -1 | sed 's/.*SHA256: *//')"
             echo "- 받기: 이 화면 아래 Artifacts의 KOINTBOOK-apk-${{ github.run_number }}"
           } >> "$GITHUB_STEP_SUMMARY"
