@@ -39,7 +39,10 @@
         <activity android:name=".StockEditActivity" android:exported="false"
             android:windowSoftInputMode="stateHidden" />
         <activity android:name=".DataManageActivity" android:exported="false" />
-        <activity android:name=".DataQueryActivity" android:exported="false" />
+        <!-- [2026-10-15] DATA 삭제 화면에 AREA/SECTION/서가번호 입력칸이 생겨서, 다른 입력 화면처럼
+             들어올 때 화면 키보드가 저절로 뜨지 않게 한다. -->
+        <activity android:name=".DataQueryActivity" android:exported="false"
+            android:windowSoftInputMode="stateHidden" />
         <activity android:name=".SectionQueryActivity" android:exported="false" />
 
     </application>

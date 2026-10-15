@@ -7,22 +7,85 @@
 
     <include layout="@layout/title_bar" />
 
+    <!-- [2026-10-15] "data삭제 검색조건을 선택스크롤로 하지말고, area입력칸 섹션입력칸 한줄,
+         그다음줄에 서가번호입력칸" - 위치 드롭다운(Spinner)을 없애고 입력칸 3개로 바꿨다.
+         1줄: AREA / SECTION, 2줄: 서가번호 + [조회]. 엔터로 AREA -> SECTION -> 서가번호 ->
+         [조회] 순으로 넘어간다(DataQueryActivity.kt 참고). 입력칸은 위치입력 화면처럼
+         inputType을 따로 주지 않는다 - number 등으로 주면 한 줄 입력칸이 되어, 엔터를 뗄 때
+         안드로이드가 포커스를 한 칸 더 넘겨버릴 수 있다. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="10dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="3dp"
         android:gravity="center_vertical">
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="위치" android:textStyle="bold" android:textColor="@color/text_primary" />
+        <TextView android:layout_width="64dp" android:layout_height="wrap_content" android:text="AREA" android:textSize="14sp" android:textStyle="bold" android:textColor="#000000" />
 
-        <Spinner
-            android:id="@+id/spLocation"
+        <EditText
+            android:id="@+id/etArea"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp" />
+            android:layout_weight="1"
+            android:background="@drawable/edit_classic"
+            android:padding="6dp"
+            android:maxLength="2"
+            android:maxLines="1"
+            android:imeOptions="actionNext"
+            android:hint="2자리"
+            android:textColorHint="@color/text_disabled"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#000000" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_marginEnd="6dp" android:text="SECTION" android:textSize="14sp" android:textStyle="bold" android:textColor="#000000" />
+
+        <EditText
+            android:id="@+id/etSection"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/edit_classic"
+            android:padding="6dp"
+            android:maxLength="3"
+            android:maxLines="1"
+            android:imeOptions="actionNext"
+            android:hint="3자리"
+            android:textColorHint="@color/text_disabled"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#000000" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="3dp"
+        android:paddingBottom="6dp"
+        android:gravity="center_vertical">
+
+        <TextView android:layout_width="64dp" android:layout_height="wrap_content" android:text="서가번호" android:textSize="14sp" android:textStyle="bold" android:textColor="#000000" />
+
+        <EditText
+            android:id="@+id/etShelfNo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/edit_classic"
+            android:padding="6dp"
+            android:maxLength="11"
+            android:maxLines="1"
+            android:imeOptions="actionDone"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#000000" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnQuery"

@@ -174,7 +174,7 @@ class PdaInstallScreen(tk.Frame):
             if reinstall:
                 progress(message="기존 앱 삭제 중...", done=0, total=0)
                 adb_utils.uninstall_app()
-            progress(message="PDA에 앱 설치 중... (잠시 기다려 주세요)", done=0, total=0)
+            progress(message="PDA에 앱 설치 중... (PDA 화면에 허용/설치 팝업이 뜨면 눌러 주세요)", done=0, total=0)
             ok, out = adb_utils.install_apk(apk)
             if not ok:
                 return ("failed", out, (False, ""))

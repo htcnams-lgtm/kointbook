@@ -23,6 +23,10 @@ class StoreMasterScreen(tk.Frame):
         top.pack(fill=tk.X)
         tk.Label(top, text="조회조건: 전체", bg=COLOR_HEADER_BG).pack(side=tk.LEFT, padx=8, pady=8)
         win_button(top, text="조회", command=self.refresh, kind="normal").pack(side=tk.LEFT, padx=8)
+        # [2026-10-15] 등록/수정/삭제를 아래쪽에서 위쪽 [조회] 옆으로 옮겼다(작업자마스터와 같은 위치).
+        win_button(top, text="등록", width=10, command=self.open_register_dialog, kind="normal").pack(side=tk.LEFT, padx=(36, 0))
+        win_button(top, text="수정", width=10, command=self.open_edit_dialog, kind="normal").pack(side=tk.LEFT, padx=(6, 0))
+        win_button(top, text="삭제", width=10, command=self.delete_selected, kind="normal").pack(side=tk.LEFT, padx=(6, 0))
         win_button(top, text="⬆ PDA 전송", command=self.send_to_pda, kind="normal").pack(side=tk.RIGHT, padx=8, pady=6)
 
         container, self.tree = setup_treeview(
@@ -31,12 +35,6 @@ class StoreMasterScreen(tk.Frame):
         )
         container.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
-
-        bottom = tk.Frame(self, bg=CL_BG)
-        bottom.pack(fill=tk.X, padx=8, pady=8)
-        win_button(bottom, text="등록", width=10, command=self.open_register_dialog, kind="normal").pack(side=tk.LEFT)
-        win_button(bottom, text="수정", width=10, command=self.open_edit_dialog, kind="normal").pack(side=tk.LEFT, padx=6)
-        win_button(bottom, text="삭제", width=10, command=self.delete_selected, kind="normal").pack(side=tk.LEFT)
 
     def _on_select(self, event=None):
         sel = self.tree.selection()

@@ -49,6 +49,7 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
 from . import db as dbmod
+from . import scope
 from .virtual_table import VirtualTable
 from .ui_common import (
     center_on_app,
@@ -872,8 +873,12 @@ class PerformanceScreen(tk.Frame):
                 msg = "수정할 위치(AREA, SECTION, 서가번호)를 입력하세요."
             elif len(ra) != AREA_MAX_LEN:
                 msg, widget = f"AREA는 {AREA_MAX_LEN}자리로 입력하세요.", e_area
+            elif not scope.is_valid_area(ra):
+                msg, widget = scope.invalid_area_message(), e_area
             elif len(rs) != SECTION_MAX_LEN:
                 msg, widget = f"SECTION은 {SECTION_MAX_LEN}자리로 입력하세요.", e_section
+            elif not rh and scope.kind_of_area(ra) == "문구":
+                rh = scope.STATIONERY_SHELF_NO   # 문구는 서가번호가 없어 X로 저장(PDA와 동일)
             elif not rh:
                 msg, widget = "서가번호를 입력하세요.", e_shelf
             elif len(rh) > SHELF_NO_MAX_LEN:
@@ -1204,6 +1209,10 @@ class PerformanceScreen(tk.Frame):
             # 값이 일치한다(다르면 이 수정 팝업에서 "1"로 보이는 문제가
             # 생겼었다) - 또한 이래야 작업자 자동배정(AREA/SECTION 일치
             # 검사)도 항상 정확히 맞는다.
+            # [2026-10-15] 문구 AREA(20~29, 80~89)는 서가번호를 비워 두면 X로 저장한다(PDA와 동일).
+            if not raw_shelf and scope.kind_of_area(raw_area) == "문구":
+                raw_shelf = scope.STATIONERY_SHELF_NO
+                e_shelf.insert(0, raw_shelf)
             area = normalize_area(raw_area)
             section = raw_section
             shelf_no = raw_shelf
@@ -1218,6 +1227,11 @@ class PerformanceScreen(tk.Frame):
             if len(raw_area) != AREA_MAX_LEN:
                 messagebox.showinfo("알림", f"AREA는 {AREA_MAX_LEN}자리로 입력하세요.", parent=popup)
                 e_area.focus_set()
+                return
+            if not scope.is_valid_area(raw_area):
+                messagebox.showinfo("알림", scope.invalid_area_message(), parent=popup)
+                e_area.focus_set()
+                e_area.selection_range(0, tk.END)
                 return
             if len(raw_section) != SECTION_MAX_LEN:
                 messagebox.showinfo("알림", f"SECTION은 {SECTION_MAX_LEN}자리로 입력하세요.", parent=popup)
@@ -1304,6 +1318,11 @@ class PerformanceScreen(tk.Frame):
                 entry.selection_range(0, tk.END)
                 entry.focus_set()
                 return "break"
+            if field_label == "AREA" and not scope.is_valid_area(text):
+                messagebox.showinfo("알림", scope.invalid_area_message(), parent=popup)
+                entry.selection_range(0, tk.END)
+                entry.focus_set()
+                return "break"
             advance()
             return "break"
 
@@ -1314,8 +1333,14 @@ class PerformanceScreen(tk.Frame):
         # 안 맞으면 탭을 눌러도 다음 칸으로 못 넘어간다).
         e_area.bind("<Return>", lambda e: _confirm_field(e_area, "AREA", AREA_MAX_LEN, e_section.focus_set))
         e_area.bind("<Tab>", lambda e: _confirm_field(e_area, "AREA", AREA_MAX_LEN, e_section.focus_set))
-        e_section.bind("<Return>", lambda e: _confirm_field(e_section, "SECTION", SECTION_MAX_LEN, e_shelf.focus_set))
-        e_section.bind("<Tab>", lambda e: _confirm_field(e_section, "SECTION", SECTION_MAX_LEN, e_shelf.focus_set))
+        def _to_shelf():
+            # 문구 AREA면 서가번호 칸이 비어 있을 때 X를 채워 준다(문구는 서가번호 없음).
+            if not e_shelf.get().strip() and scope.kind_of_area(e_area.get().strip()) == "문구":
+                e_shelf.insert(0, scope.STATIONERY_SHELF_NO)
+            e_shelf.focus_set()
+
+        e_section.bind("<Return>", lambda e: _confirm_field(e_section, "SECTION", SECTION_MAX_LEN, _to_shelf))
+        e_section.bind("<Tab>", lambda e: _confirm_field(e_section, "SECTION", SECTION_MAX_LEN, _to_shelf))
         def _advance_from_shelf():
             # [2026-09-28] "상품마스터에없는 상품 입력 팝업창은 작업자까지
             # 선택후... 그 다음에 뜨게 해줘" - 예전엔 서가번호 칸에서

@@ -284,17 +284,12 @@ def _stat_map(store_code):
 
 def split_counts(app):
     """이번 조사의 스캔 행을 (서적 행들, 문구 행들, 문구맵)으로 나눈다.
-    AREA/SECTION 범위(scope.py)가 정해져 있으면 그 범위로, 없으면 바코드가 문구
-    상품마스터에 있는지로 나눈다."""
+    AREA 번호 기준(scope.py: 문구 20~29·80~89, 그 밖은 서적)으로 나눈다."""
     store_code = app.state.store_code
     stat = _stat_map(store_code)
-    by_scope = any(scope.is_defined(k) for k in scope.KINDS)
     book_rows, stat_rows = [], []
     for r in _fetch_counts(store_code, app.state.survey_date):
-        if by_scope:
-            is_stat = scope.classify(r["area"], r["section"]) == "문구"
-        else:
-            is_stat = norm_barcode(r["isbn"]) in stat
+        is_stat = scope.classify(r["area"], r["section"]) == "문구"
         (stat_rows if is_stat else book_rows).append(r)
     return book_rows, stat_rows, stat
 

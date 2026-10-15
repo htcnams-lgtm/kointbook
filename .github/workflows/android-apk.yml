@@ -1,0 +1,100 @@
+# PDA 앱(KOINTBOOK.apk)과 PC 프로그램(KOINTBOOK_pc.exe) 자동 빌드
+# - exe는 방금 빌드한 APK를 안에 넣어서 만든다(PC의 [PDA 앱 설치]에서 바로 쓰는 내장 설치파일).
+# - 자동 실행은 끄고 수동 실행(Actions 탭 > Run workflow)만 쓴다. Claude가 빌드 전에 먼저 물어본다.
+# - 빌드된 APK는 실행 결과 화면 아래 Artifacts에서 받을 수 있다(30일 보관).
+# - 서명: 저장소 Secrets에 DEBUG_KEYSTORE_B64(PC의 debug.keystore를 base64로 바꾼 값)가 있으면
+#   PC에서 빌드한 것과 같은 서명이 되어 PDA에 덮어 설치할 수 있다. 없으면 실행마다 임시 키로
+#   서명되므로, 이미 설치된 PDA 앱 위에는 덮어 설치가 안 된다(빌드 확인용).
+name: PDA 앱(APK) + PC 프로그램(exe) 빌드
+
+on:
+  # [2026-10-15] 사용자 요청: 수정할 때마다 자동으로 빌드하지 않고, 물어본 뒤 필요할 때만 수동으로 돌린다.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 저장소에 gradlew가 없어서, gradle-wrapper.properties와 같은 Gradle 8.2를 설치해 쓴다.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.2'
+
+      - name: PC와 같은 서명 키 넣기(Secrets에 있을 때만)
+        env:
+          DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$DEBUG_KEYSTORE_B64" ]; then
+            mkdir -p "$HOME/.android"
+            printf '%s' "$DEBUG_KEYSTORE_B64" | base64 -d > "$HOME/.android/debug.keystore"
+            echo "SIGN_NOTE=PC와 같은 서명(덮어 설치 가능)" >> "$GITHUB_ENV"
+          else
+            echo "SIGN_NOTE=임시 서명(이미 설치된 PDA 앱 위에는 덮어 설치 안 됨, 빌드 확인용)" >> "$GITHUB_ENV"
+          fi
+
+      - name: APK 빌드
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KOINTBOOK-apk-${{ github.run_number }}
+          path: android_app/app/build/outputs/apk/debug/KOINTBOOK.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: 결과 요약
+        run: |
+          {
+            echo "### KOINTBOOK.apk 빌드 성공"
+            echo "- 서명: $SIGN_NOTE"
+            echo "- 받기: 이 화면 아래 Artifacts의 KOINTBOOK-apk-${{ github.run_number }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  exe:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: pc_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: KOINTBOOK-apk-${{ github.run_number }}
+          path: pc_app/apk
+
+      - name: 패키지 설치
+        run: pip install openpyxl pywin32 pyinstaller
+
+      # 윈도우 러너의 기본 글자 방식(cp1252)은 spec 파일이 한글 안내문을 출력할 때 오류가 나서 UTF-8로 맞춘다.
+      - name: exe 빌드
+        env:
+          PYTHONUTF8: '1'
+        run: pyinstaller KOINTBOOK.spec
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KOINTBOOK-pc-exe-${{ github.run_number }}
+          path: pc_app/dist/KOINTBOOK_pc.exe
+          if-no-files-found: error
+          retention-days: 30

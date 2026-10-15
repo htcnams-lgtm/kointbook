@@ -14,7 +14,8 @@ import androidx.core.content.ContextCompat
 import java.text.NumberFormat
 import java.util.Locale
 
-/** 위치 건수/수량 조회: 위치별 건수/수량 집계표 */
+/** 위치 건수/수량 조회: 위치별 건수/수량 집계표
+ * [2026-10-15] Data 관리 메뉴 이름 "2. DATA 조회"(예전 3. 위치별 건수/수량 조회). 화면 내용은 그대로. */
 class SectionQueryActivity : BaseActivity() {
 
     private lateinit var db: DbHelper
@@ -40,7 +41,7 @@ class SectionQueryActivity : BaseActivity() {
         setContentView(R.layout.activity_section_query)
         db = DbHelper.getInstance(this)
 
-        findViewById<TextView>(R.id.tvTitleBarText).text = "KOINTBOOK [위치 건수/수량 조회]"
+        findViewById<TextView>(R.id.tvTitleBarText).text = "KOINTBOOK [DATA 조회]"
 
         spLocation = findViewById(R.id.spLocation)
         llList = findViewById(R.id.llList)

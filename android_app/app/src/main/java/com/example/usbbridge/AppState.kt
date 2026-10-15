@@ -12,6 +12,25 @@ package com.example.usbbridge
  * 컬럼으로 쓰기 때문이다.
  */
 object AppState {
+    const val KIND_BOOK = "서적"
+    const val KIND_STATIONERY = "문구"
+    // 문구는 서가번호가 없어 고정값 X로 저장한다.
+    const val STATIONERY_SHELF_NO = "X"
+
+    /** [2026-10-15] AREA 번호로 서적/문구 구분(PC scope.py와 같은 기준):
+     * 서적 10~19, 90~99 / 문구 20~29, 80~89. 그 밖의 AREA는 null(사용 불가). */
+    const val AREA_RULE_TEXT = "서적 10~19, 90~99\n문구 20~29, 80~89"
+    fun kindOfArea(area: String?): String? {
+        val a = area?.trim()?.toIntOrNull() ?: return null
+        return when (a) {
+            in 10..19, in 90..99 -> KIND_BOOK
+            in 20..29, in 80..89 -> KIND_STATIONERY
+            else -> null
+        }
+    }
+
+    val isStationery: Boolean get() = kindOfArea(currentArea) == KIND_STATIONERY
+
     var storeCode: String = "KYOBO01"
     var storeName: String = "교보문고 광화문점"
     var workerCode: String = ""

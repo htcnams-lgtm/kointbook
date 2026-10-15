@@ -47,14 +47,20 @@ for name in ("assets", "platform-tools"):
 import glob
 import json
 import time
+from datetime import datetime, timedelta, timezone
+# [2026-10-15] GitHub 빌드 서버는 세계표준시(UTC)라 time.localtime()으로 찍으면 한국 시각보다 9시간
+# 빠르게(예: 11:45 -> 02:45) 나왔다. 한국 시각(KST)으로 고정해서 적는다.
+_KST = timezone(timedelta(hours=9))
+def _kst(ts):
+    return datetime.fromtimestamp(ts, _KST).strftime("%Y-%m-%d %H:%M")
 _apk_dir = os.path.join(BASE_DIR, "apk")
 _apks = sorted(glob.glob(os.path.join(_apk_dir, "*.apk")), key=os.path.getmtime, reverse=True)
 if _apks:
     _latest = _apks[0]
     _info = {
         "file": os.path.basename(_latest),
-        "apk_date": time.strftime("%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(_latest))),
-        "embedded_at": time.strftime("%Y-%m-%d %H:%M", time.localtime()),
+        "apk_date": _kst(os.path.getmtime(_latest)),
+        "embedded_at": _kst(time.time()),
     }
     _info_path = os.path.join(_apk_dir, "apk_info.json")
     with open(_info_path, "w", encoding="utf-8") as _f:

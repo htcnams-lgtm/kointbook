@@ -137,8 +137,9 @@
             </FrameLayout>
         </LinearLayout>
 
-        <!-- 3. 서가번호 -->
+        <!-- 3. 서가번호 (문구 모드에서는 숨김) -->
         <LinearLayout
+            android:id="@+id/rowShelf"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
