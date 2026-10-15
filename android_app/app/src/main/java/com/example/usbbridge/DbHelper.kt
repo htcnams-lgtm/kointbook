@@ -674,6 +674,37 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
         return result
     }
 
+    /**
+     * [2026-10-15] DATA 삭제 화면의 AREA / SECTION / 서가번호 입력칸 조회.
+     * 값을 넣은 칸만 조건이 된다(빈 칸은 조건에서 빠짐):
+     *   AREA만 -> 그 AREA의 모든 위치, AREA+SECTION -> 둘 다 맞는 위치,
+     *   AREA+SECTION+서가번호 -> 셋 다 맞는 위치. 세 칸이 다 비면 전체.
+     * 값은 정확히 같아야 맞는 것으로 본다(위치입력과 같은 자릿수 - AREA "01", SECTION "001").
+     * 결과는 sectionSummary()와 같은 "AREA-SECTION-서가번호" 문자열, 같은 순서다.
+     */
+    fun locationKeysByFilter(
+        area: String, section: String, shelfNo: String,
+        storeCode: String? = null, surveyDate: String? = null
+    ): List<String> {
+        val groupExpr = "area || '-' || section || '-' || shelf_no"
+        val conditions = mutableListOf<String>()
+        val args = mutableListOf<String>()
+        if (!storeCode.isNullOrEmpty()) { conditions.add("store_code = ?"); args.add(storeCode) }
+        if (!surveyDate.isNullOrEmpty()) { conditions.add("survey_date = ?"); args.add(surveyDate) }
+        if (area.isNotEmpty()) { conditions.add("area = ?"); args.add(area) }
+        if (section.isNotEmpty()) { conditions.add("section = ?"); args.add(section) }
+        if (shelfNo.isNotEmpty()) { conditions.add("shelf_no = ?"); args.add(shelfNo) }
+        val whereClause = if (conditions.isEmpty()) "" else "WHERE " + conditions.joinToString(" AND ")
+        val result = mutableListOf<String>()
+        readableDatabase.rawQuery(
+            "SELECT $groupExpr FROM stock_counts $whereClause GROUP BY $groupExpr ORDER BY $groupExpr",
+            args.toTypedArray()
+        ).use { c ->
+            while (c.moveToNext()) result.add(c.getString(0) ?: "")
+        }
+        return result
+    }
+
     fun deleteLocation(locationKey: String) {
         val (area, section, shelfNo) = splitLocationKey(locationKey)
         writableDatabase.delete(

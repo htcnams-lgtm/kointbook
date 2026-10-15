@@ -23,6 +23,10 @@ import java.util.Locale
  * ZZOINT에 있던 "무선전송"(Firebase) 메뉴는 KOINTBOOK에는 없다 - USB adb만
  * 쓰는 것으로 단순화했다 (숫자키 배정도 1=Data전송, 2=DATA조회,
  * 3=위치별 건수/수량 조회, 4=미전송확인 으로 한 칸씩 당겨졌다).
+ *
+ * [2026-10-15] "섹션별조회명을 data조회로, data조회를 data삭제로, 순서 서로 뒤바꿈" -
+ * 2=DATA 조회(위치별 건수/수량, SectionQueryActivity), 3=DATA 삭제(위치 삭제,
+ * DataQueryActivity)로 바꿨다. 화면 클래스 이름은 그대로다.
  */
 class DataManageActivity : BaseActivity() {
 
@@ -36,27 +40,29 @@ class DataManageActivity : BaseActivity() {
         findViewById<TextView>(R.id.tvTitleBarText).text = "KOINTBOOK [Data 관리]"
 
         findViewById<android.widget.Button>(R.id.btnSend).setOnClickListener { confirmSend() }
-        findViewById<android.widget.Button>(R.id.btnQuery).setOnClickListener {
-            startActivity(android.content.Intent(this, DataQueryActivity::class.java))
-        }
+        // 2. DATA 조회 (위치별 건수/수량)
         findViewById<android.widget.Button>(R.id.btnSectionQuery).setOnClickListener {
             startActivity(android.content.Intent(this, SectionQueryActivity::class.java))
+        }
+        // 3. DATA 삭제
+        findViewById<android.widget.Button>(R.id.btnQuery).setOnClickListener {
+            startActivity(android.content.Intent(this, DataQueryActivity::class.java))
         }
         findViewById<android.widget.Button>(R.id.btnUnsentCheck).setOnClickListener { showUnsentInfo() }
     }
 
     /** 숫자키 1~4로도 각 메뉴에 바로 들어갈 수 있게 한다.
-     * (1=Data전송, 2=DATA조회, 3=위치별 건수/수량 조회, 4=미전송확인) */
+     * (1=Data전송, 2=DATA 조회(위치별 건수/수량), 3=DATA 삭제, 4=미전송확인) */
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
         when (keyCode) {
             android.view.KeyEvent.KEYCODE_1, android.view.KeyEvent.KEYCODE_NUMPAD_1 -> {
                 confirmSend(); return true
             }
             android.view.KeyEvent.KEYCODE_2, android.view.KeyEvent.KEYCODE_NUMPAD_2 -> {
-                startActivity(android.content.Intent(this, DataQueryActivity::class.java)); return true
+                startActivity(android.content.Intent(this, SectionQueryActivity::class.java)); return true
             }
             android.view.KeyEvent.KEYCODE_3, android.view.KeyEvent.KEYCODE_NUMPAD_3 -> {
-                startActivity(android.content.Intent(this, SectionQueryActivity::class.java)); return true
+                startActivity(android.content.Intent(this, DataQueryActivity::class.java)); return true
             }
             android.view.KeyEvent.KEYCODE_4, android.view.KeyEvent.KEYCODE_NUMPAD_4 -> {
                 showUnsentInfo(); return true

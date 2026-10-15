@@ -41,8 +41,12 @@
             android:textStyle="bold"
             android:layout_marginBottom="14dp" />
 
+        <!-- [2026-10-15] "섹션별조회명을 data조회로 변경, data조회를 data삭제로, 순서 서로
+             뒤바꿈" - 2번 = DATA 조회(예전 3번 위치별 건수/수량 조회, SectionQueryActivity),
+             3번 = DATA 삭제(예전 2번 DATA 조회, DataQueryActivity). 버튼 id는 그대로 두고
+             위치·글자만 바꿨다(btnSectionQuery -> DATA 조회, btnQuery -> DATA 삭제). -->
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnQuery"
+            android:id="@+id/btnSectionQuery"
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:background="@drawable/button_classic"
@@ -54,13 +58,13 @@
             android:layout_marginBottom="14dp" />
 
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnSectionQuery"
+            android:id="@+id/btnQuery"
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:background="@drawable/button_classic"
             android:elevation="2dp"
             android:textColor="#FFFFFF"
-            android:text="3. 위치별 건수/수량 조회"
+            android:text="3. DATA 삭제"
             android:textSize="16sp"
             android:textStyle="bold"
             android:layout_marginBottom="14dp" />
