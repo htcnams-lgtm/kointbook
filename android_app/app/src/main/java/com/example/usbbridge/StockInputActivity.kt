@@ -309,7 +309,7 @@ class StockInputActivity : BaseActivity() {
         setContentView(R.layout.activity_stock_input)
         db = DbHelper.getInstance(this)
 
-        findViewById<TextView>(R.id.tvTitleBarText).text = "KOINTBOOK [재고입력]"
+        findViewById<TextView>(R.id.tvTitleBarText).text = if (AppState.isStationery) "KOINTBOOK [문구 재고입력]" else "KOINTBOOK [재고입력]"
 
         rgMode = findViewById(R.id.rgMode)
         tvLoc = findViewById(R.id.tvLoc)

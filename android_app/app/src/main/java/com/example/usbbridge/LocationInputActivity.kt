@@ -78,6 +78,21 @@ class LocationInputActivity : BaseActivity() {
     private lateinit var etSection: EditText
     private lateinit var etShelfNo: EditText
     private lateinit var fields: List<EditText>
+    private lateinit var btnKind: android.widget.Button
+    private lateinit var rowShelf: android.view.View
+
+    // 문구 모드는 AREA -> SECTION 두 칸만 쓴다(서가번호는 "X" 고정 저장).
+    private fun lastIndex(): Int = if (AppState.isStationery) 1 else fields.size - 1
+
+    private fun applyKind() {
+        val st = AppState.isStationery
+        btnKind.text = "구분: ${AppState.itemKind}" + if (st) "  (서가번호 없음)" else ""
+        rowShelf.visibility = if (st) android.view.View.GONE else android.view.View.VISIBLE
+        findViewById<TextView>(R.id.tvTitleBarText).text =
+            if (st) "KOINTBOOK [문구 위치입력]" else "KOINTBOOK [위치입력]"
+        etSection.imeOptions = if (st) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NEXT
+        etSection.nextFocusDownId = if (st) R.id.etSection else R.id.etShelfNo
+    }
 
     // 물리 스캔버튼은 "지금 어느 칸을 채워야 하는지"를 모르고 그냥 한
     // 건만 쏴주므로, 마지막으로 포커스를 받은 칸의 인덱스를 기억해뒀다가
@@ -124,6 +139,8 @@ class LocationInputActivity : BaseActivity() {
         etSection = findViewById(R.id.etSection)
         etShelfNo = findViewById(R.id.etShelfNo)
         fields = listOf(etArea, etSection, etShelfNo)
+        btnKind = findViewById(R.id.btnKind)
+        rowShelf = findViewById(R.id.rowShelf)
 
         for ((index, field) in fields.withIndex()) {
             // 자릿수 제한은 XML(maxLength) 대신 여기서 건다 - 잘라낸 글자 수를 세어 두었다가
@@ -165,7 +182,7 @@ class LocationInputActivity : BaseActivity() {
                 if (keyEvent.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        if (index < fields.size - 1) {
+                        if (index < lastIndex()) {
                             fields[index + 1].requestFocus()
                             fields[index + 1].selectAll()
                         }
@@ -175,6 +192,8 @@ class LocationInputActivity : BaseActivity() {
                         if (index > 0) {
                             fields[index - 1].requestFocus()
                             fields[index - 1].selectAll()
+                        } else {
+                            btnKind.requestFocus()
                         }
                         true
                     }
@@ -185,7 +204,23 @@ class LocationInputActivity : BaseActivity() {
 
         setFieldText(0, AppState.currentArea)
         setFieldText(1, AppState.currentSection)
-        setFieldText(2, AppState.currentShelfNo)
+        setFieldText(2, if (AppState.isStationery || AppState.currentShelfNo == AppState.STATIONERY_SHELF_NO) "" else AppState.currentShelfNo)
+
+        btnKind.setOnClickListener {
+            AppState.itemKind = if (AppState.isStationery) AppState.KIND_BOOK else AppState.KIND_STATIONERY
+            AppState.persistLocation(this)
+            applyKind()
+            etArea.requestFocus()
+            etArea.selectAll()
+        }
+        btnKind.setOnKeyListener { _, keyCode, keyEvent ->
+            if (keyEvent.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                etArea.requestFocus()
+                etArea.selectAll()
+                true
+            } else false
+        }
+        applyKind()
 
         findViewById<android.widget.Button>(R.id.btnMaxQty).setOnClickListener {
             showMaxQtyDialog()
@@ -234,7 +269,7 @@ class LocationInputActivity : BaseActivity() {
         // [2026-10-06] "서가번호 물리스캔후 바로 재고입력화면으로 넘어가지않고 물리 엔터키 눌러야
         // 재고입력화면으로" - 마지막 칸(서가번호)은 스캔으로 값만 채우고 멈춘다. 스캐너가 값 뒤에
         // 자동으로 붙이는 엔터(scannedBurst)도 무시하고, 사람이 직접 누른 물리 엔터만 이동시킨다.
-        val isLast = index == fields.size - 1
+        val isLast = index == lastIndex()
         if (isLast && (fromScan || scannedBurst)) {
             clearOverflow(index)
             fields[index].requestFocus()
@@ -258,7 +293,7 @@ class LocationInputActivity : BaseActivity() {
             fields[index].selectAll()
             return
         }
-        if (index < fields.size - 1) {
+        if (index < lastIndex()) {
             val next = fields[index + 1]
             next.requestFocus()
             next.selectAll()
@@ -301,9 +336,11 @@ class LocationInputActivity : BaseActivity() {
     private fun enterLocation() {
         val area = etArea.text.toString().trim()
         val section = etSection.text.toString().trim()
-        val shelfNo = etShelfNo.text.toString().trim()
+        val shelfNo = if (AppState.isStationery) AppState.STATIONERY_SHELF_NO else etShelfNo.text.toString().trim()
         if (area.isEmpty() || section.isEmpty() || shelfNo.isEmpty()) {
-            Toast.makeText(this, "AREA/SECTION/서가번호를 모두 입력하세요.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this,
+                if (AppState.isStationery) "AREA/SECTION을 모두 입력하세요." else "AREA/SECTION/서가번호를 모두 입력하세요.",
+                Toast.LENGTH_SHORT).show()
             when {
                 area.isEmpty() -> etArea.requestFocus()
                 section.isEmpty() -> etSection.requestFocus()

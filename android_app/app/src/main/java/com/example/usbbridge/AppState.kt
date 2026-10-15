@@ -12,6 +12,12 @@ package com.example.usbbridge
  * 컬럼으로 쓰기 때문이다.
  */
 object AppState {
+    const val KIND_BOOK = "서적"
+    const val KIND_STATIONERY = "문구"
+    const val STATIONERY_SHELF_NO = "X"
+
+    val isStationery: Boolean get() = itemKind == KIND_STATIONERY
+
     var storeCode: String = "KYOBO01"
     var storeName: String = "교보문고 광화문점"
     var workerCode: String = ""
@@ -21,6 +27,8 @@ object AppState {
     var currentArea: String = ""
     var currentSection: String = ""
     var currentShelfNo: String = ""
+    // [2026-10-15] 위치입력 화면의 서적/문구 구분. 문구는 서가번호가 없어 STATIONERY_SHELF_NO("X")로 저장한다.
+    var itemKind: String = KIND_BOOK
     var currentDan: String = ""
     var currentYeol: String = ""
     var autoMode: Boolean = true   // true=자동(스캔 시 수량 1 자동입력), false=수동(스캔 후 수량 직접입력)
@@ -67,6 +75,7 @@ object AppState {
         currentArea = db.getSetting("app_current_area", currentArea)
         currentSection = db.getSetting("app_current_section", currentSection)
         currentShelfNo = db.getSetting("app_current_shelf_no", currentShelfNo)
+        itemKind = db.getSetting("app_item_kind", KIND_BOOK).let { if (it == KIND_STATIONERY) it else KIND_BOOK }
         currentDan = db.getSetting("app_current_dan", currentDan)
         currentYeol = db.getSetting("app_current_yeol", currentYeol)
         autoMode = db.getSetting("app_auto_mode", if (autoMode) "1" else "0") == "1"
@@ -88,6 +97,7 @@ object AppState {
         db.setSetting("app_current_area", currentArea)
         db.setSetting("app_current_section", currentSection)
         db.setSetting("app_current_shelf_no", currentShelfNo)
+        db.setSetting("app_item_kind", itemKind)
         db.setSetting("app_current_dan", currentDan)
         db.setSetting("app_current_yeol", currentYeol)
     }
