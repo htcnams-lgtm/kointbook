@@ -34,6 +34,11 @@ from .ui_common import center_on_app, setup_treeview, export_rows_to_excel, prin
     normalize_area, digit_code_variants, area_section_code, CL_BG, CL_NAVY, win_button
 
 
+
+def _code(area, section):
+    """화면 표시용 코드: AREA-SECTION (예: 10-100)."""
+    return area_section_code(area, section, sep="-")
+
 class SectionCheckScreen(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg=CL_BG)
@@ -181,8 +186,8 @@ class SectionCheckScreen(tk.Frame):
             return
         idx = self.tree_plan.index(sel[0])
         row = self._plan_rows[idx]
-        from_code = area_section_code(row["area"], row["section_from"])
-        to_code = area_section_code(row["area"], row["section_to"])
+        from_code = _code(row["area"], row["section_from"])
+        to_code = _code(row["area"], row["section_to"])
         if not messagebox.askyesno("확인", f"{from_code}~{to_code} 범위를 삭제할까요?"):
             return
         conn = dbmod.get_conn()
@@ -287,8 +292,8 @@ class SectionCheckScreen(tk.Frame):
 
         self.tree_plan.delete(*self.tree_plan.get_children())
         for i, r in enumerate(self._plan_rows):
-            from_code = area_section_code(r["area"], r["section_from"])
-            to_code = area_section_code(r["area"], r["section_to"])
+            from_code = _code(r["area"], r["section_from"])
+            to_code = _code(r["area"], r["section_to"])
             self.tree_plan.insert("", tk.END, values=(from_code, to_code),
                                   tags=("odd",) if i % 2 == 1 else ())
 
@@ -318,7 +323,7 @@ class SectionCheckScreen(tk.Frame):
         for i, r in enumerate(self._done_rows):
             info = counted_map[r]
             mark = "✔" if r in printed else ""
-            self.tree_done.insert("", tk.END, values=(mark, area_section_code(r[0], r[1]), info["workers"] or ""),
+            self.tree_done.insert("", tk.END, values=(mark, _code(r[0], r[1]), info["workers"] or ""),
                                   tags=("odd",) if i % 2 == 1 else ())
 
         # 중복 Section: 작업자가 2명 이상이면서 아직 "인지" 처리 안 한 것
@@ -327,7 +332,7 @@ class SectionCheckScreen(tk.Frame):
         i = 0
         for r, info in sorted(counted_map.items()):
             if info["worker_cnt"] and info["worker_cnt"] > 1 and r not in acked:
-                self.tree_dup.insert("", tk.END, values=(area_section_code(r[0], r[1]), info["workers"] or ""),
+                self.tree_dup.insert("", tk.END, values=(_code(r[0], r[1]), info["workers"] or ""),
                                      tags=("odd",) if i % 2 == 1 else ())
                 self._dup_rows.append(r)
                 i += 1
@@ -343,6 +348,6 @@ class SectionCheckScreen(tk.Frame):
             for sec in range(lo, hi + 1):
                 key = (plan["area"], str(sec))
                 if key not in counted_map:
-                    self.tree_missing.insert("", tk.END, values=(area_section_code(plan["area"], sec),),
+                    self.tree_missing.insert("", tk.END, values=(_code(plan["area"], sec),),
                                              tags=("odd",) if i % 2 == 1 else ())
                     i += 1

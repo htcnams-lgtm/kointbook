@@ -360,6 +360,8 @@ class StockInputActivity : BaseActivity() {
         // 스캐너가 바코드 뒤에 엔터 대신 탭(TAB)을 붙여 보내는 설정이면, 탭 때문에 확정 없이
         // 포커스만 수량칸으로 넘어가 버렸다. 탭도 엔터와 똑같이 "확정"으로 처리하고 소비한다.
         etIsbn.setOnKeyListener { _, keyCode, event ->
+            // 키를 꾹 눌러 자동반복되는 입력은 스캔이 아니다(ScanInputDetector.noteKeyRepeat 참고).
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount > 0) scanDetector.noteKeyRepeat()
             if (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
                 keyCode == KeyEvent.KEYCODE_TAB) {
                 if (event.action == KeyEvent.ACTION_UP) {

@@ -54,6 +54,11 @@ class SplashActivity : BaseActivity() {
         }.start()
 
         findViewById<TextView>(R.id.tvTitleBarText).text = "KOINTBOOK"
+        // [2026-10-15] 초기화면 버전: 예전엔 "VER. 1.0.0.0"으로 고정이었다. 설치된 앱의 versionName을 보여준다.
+        try {
+            val ver = packageManager.getPackageInfo(packageName, 0).versionName
+            findViewById<TextView>(R.id.tvSplashVersion).text = "VER. $ver"
+        } catch (_: Exception) {}
 
         tvDate = findViewById(R.id.tvDate)
         tvTime = findViewById(R.id.tvTime)

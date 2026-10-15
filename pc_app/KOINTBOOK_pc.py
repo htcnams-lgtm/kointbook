@@ -261,6 +261,12 @@ class KointBookPcApp:
         )
         self.quicklink_label.pack(side=tk.RIGHT, padx=16)
         self.quicklink_label.bind("<Button-1>", lambda e: self._jump_to_active())
+        # [2026-10-15] "활성화면 바로가기" 왼쪽에 PDA 초기화면처럼 버전과 카피라이트를 표시한다.
+        self.version_label = tk.Label(
+            bar, text=f"VER. {APP_VERSION}   © 2026 namsman", bg=CL_NAVY_DARK, fg="#C9CED8",
+            font=("", 9),
+        )
+        self.version_label.pack(side=tk.RIGHT, padx=(0, 4))
 
         # 드롭다운 밖(다른 메뉴 버튼도 아닌 곳)을 클릭하면 닫는다. 클릭이
         # 메뉴 버튼 자신 위에서 일어난 경우는 각 버튼의 <Button-1>(토글)이

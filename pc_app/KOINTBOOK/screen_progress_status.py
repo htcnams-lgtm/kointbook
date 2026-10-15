@@ -37,6 +37,11 @@ STATUS_COLORS = {
 TILE_W, TILE_H = 74, 52  # 타일 하나 크기(px) - 그리드 열 수를 계산할 때 씀
 
 
+
+def _code(area, section):
+    """화면 표시용 코드: AREA-SECTION (예: 10-100)."""
+    return area_section_code(area, section, sep="-")
+
 class ProgressStatusScreen(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg=CL_BG)
@@ -182,7 +187,7 @@ class ProgressStatusScreen(tk.Frame):
                 status = "완료"
             else:
                 status = "미완료"
-            rows.append((area_section_code(k[0], k[1]), status, k[0], k[1]))
+            rows.append((_code(k[0], k[1]), status, k[0], k[1]))
         self._rows = rows
         self._render_grid()
 
@@ -262,7 +267,7 @@ class ProgressStatusScreen(tk.Frame):
         conn.close()
 
         if not rows:
-            messagebox.showinfo("알림", f"{area_section_code(area, section)}에 실사 데이터가 없습니다.")
+            messagebox.showinfo("알림", f"{_code(area, section)}에 실사 데이터가 없습니다.")
             return
 
         data = []
@@ -272,7 +277,7 @@ class ProgressStatusScreen(tk.Frame):
             data.append((location, r["isbn"], r["book_name"], r["qty"]))
 
         headers = ("LOCATION", "바코드", "도서명", "재고수량")
-        default_name = f"섹션별아이템재고현황_{area_section_code(area, section)}_{today_str()}.xlsx"
+        default_name = f"섹션별아이템재고현황_{_code(area, section)}_{today_str()}.xlsx"
         path = print_rows_to_excel(data, headers, default_name=default_name)
         if not path:
             return
