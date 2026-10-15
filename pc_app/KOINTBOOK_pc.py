@@ -44,6 +44,7 @@ import tkinter as tk
 from pathlib import Path
 
 from KOINTBOOK.version import APP_VERSION
+from KOINTBOOK import big_messagebox
 
 def _fatal_start_error():
     """[2026-10-13] 시작 중(불러오기 단계)에 오류가 나도 창이 바로 닫히지 않게, 오류 내용을 화면에
@@ -490,6 +491,7 @@ def main():
     dbmod.init_db()
     atexit.register(adb_utils.kill_server)
     root = tk.Tk()
+    big_messagebox.install()  # 알림창 글씨 크게
     _set_app_icon(root)
     KointBookPcApp(root)
     dbmod.analyze_in_background()  # 큰 조회가 빨라지도록 DB 통계를 화면 뒤에서 갱신

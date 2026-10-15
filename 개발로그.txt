@@ -18,6 +18,7 @@
 - 1.4.0  2026-10-15  버전 표시 신설(PC 창 제목, PDA 앱 버전), PDA 설치 지연 대응 (19~20차)
 - 1.5.0  2026-10-15  서적/문구를 AREA 번호로 고정 구분(서적 10~19·90~99, 문구 20~29·80~89, 그 외 불가), 문구는 서가번호 없음(X) (21차)
 - 1.5.1  2026-10-15  PDA 위치입력 화면에 사용 가능한 AREA 안내 상자 (22차)
+- 1.5.2  2026-10-15  알림창 글씨 크게(PC 직접 만든 알림창, PDA 팝업 +2sp) (23차)
 
 [2026-09-30] ZZOINT 개발 로그 반영 1차 (수량·금액 콤마 / DB 색인)
 ■ 이번에 반영한 것
@@ -436,3 +437,10 @@
 [2026-10-15 22차] PDA 위치입력에 사용 가능한 AREA 안내 상자 (사용자 선택 C안)
 - Max수량설정 버튼 위 빈 공간에 "사용 가능한 AREA / 서적 10~19, 90~99 / 문구 20~29, 80~89 (서가번호 없음)" 상자 추가.
 - 변경 파일: res/layout/activity_location_input.xml, build.gradle(1.5.1/16), pc_app/KOINTBOOK/version.py. 코드 변경 없음, 빌드는 아직 안 함.
+
+[2026-10-15 23차] 알림창 글씨 크기 키우기
+- 요청: "모든 알림창 내용 글씨 크기를 2사이즈 크게".
+- PC: 윈도우 기본 알림창은 글씨 크기를 바꿀 수 없어서 KOINTBOOK/big_messagebox.py(직접 만든 알림창, 글씨 12pt)로 tkinter.messagebox의 showinfo/showwarning/showerror/askyesno/askokcancel/askretrycancel/askyesnocancel을 바꿔 끼움(KOINTBOOK_pc.py에서 install()). 기존 호출은 그대로, 엔터=기본 버튼, ESC=취소/아니오. 크기는 FONT_SIZE 한 곳.
+- PDA: Dialogs.kt의 제목 17->19sp, 본문 14->16 / 13->15sp, 버튼 17sp, 미전송 확인 팝업 16->18sp.
+- 주의: 이 환경에는 tkinter/안드로이드가 없어 실제 화면은 못 봄(문법 검사만). 실제 PC/PDA 확인 필요.
+- 변경 파일: pc_app/KOINTBOOK/big_messagebox.py(신규), pc_app/KOINTBOOK_pc.py, android_app/.../{Dialogs,DataManageActivity}.kt, build.gradle(1.5.2/17), version.py
