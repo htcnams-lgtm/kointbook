@@ -1,6 +1,6 @@
 # PDA 앱(KOINTBOOK.apk)과 PC 프로그램(KOINTBOOK_pc.exe) 자동 빌드
 # - exe는 방금 빌드한 APK를 안에 넣어서 만든다(PC의 [PDA 앱 설치]에서 바로 쓰는 내장 설치파일).
-# - main에 올라가거나 PR이 열리면 android_app을 빌드해서, 코드 오류가 있으면 여기서 먼저 걸러낸다.
+# - 자동 실행은 끄고 수동 실행(Actions 탭 > Run workflow)만 쓴다. Claude가 빌드 전에 먼저 물어본다.
 # - 빌드된 APK는 실행 결과 화면 아래 Artifacts에서 받을 수 있다(30일 보관).
 # - 서명: 저장소 Secrets에 DEBUG_KEYSTORE_B64(PC의 debug.keystore를 base64로 바꾼 값)가 있으면
 #   PC에서 빌드한 것과 같은 서명이 되어 PDA에 덮어 설치할 수 있다. 없으면 실행마다 임시 키로
@@ -8,17 +8,7 @@
 name: PDA 앱(APK) + PC 프로그램(exe) 빌드
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'android_app/**'
-      - 'pc_app/**'
-      - '.github/workflows/android-apk.yml'
-  pull_request:
-    paths:
-      - 'android_app/**'
-      - 'pc_app/**'
-      - '.github/workflows/android-apk.yml'
+  # [2026-10-15] 사용자 요청: 수정할 때마다 자동으로 빌드하지 않고, 물어본 뒤 필요할 때만 수동으로 돌린다.
   workflow_dispatch:
 
 permissions:

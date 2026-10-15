@@ -423,15 +423,46 @@ def bundled_apk_info():
 
 def install_apk(apk_path: str):
     """adb install -r -d -t 로 APK를 설치(기존 앱이 있으면 데이터 유지한 채 덮어씀).
-    반환: (성공 여부, adb 출력 메시지)"""
+    반환: (성공 여부, adb 출력 메시지)
+
+    [2026-10-15] "PDA 팝업 없고 PC랑 연결도 되어 있는데 4분 30초째 설치가 안 됨" 대응:
+    PDA의 "USB 설치 앱 검사"(package verifier)가 화면에 아무 팝업도 없이 오래 걸리는 경우가
+    있어, 설치 전에 그 검사를 끄고(되는 기기만, 실패해도 무시), 그래도 90초 안에 안 끝나면
+    adb install을 접고 APK를 PDA에 복사한 뒤 pm install로 직접 설치하는 방법으로 다시 시도한다."""
+    for cmd in (["shell", "settings", "put", "global", "verifier_verify_adb_installs", "0"],
+                ["shell", "settings", "put", "global", "package_verifier_enable", "0"]):
+        try:
+            _run(cmd, timeout=10)
+        except Exception:  # noqa: BLE001
+            pass
     try:
-        result = _run(["install", "-r", "-d", "-t", apk_path], timeout=300)
+        result = _run(["install", "-r", "-d", "-t", apk_path], timeout=90)
         out = ((result.stdout or "") + "\n" + (result.stderr or "")).strip()
         return ("Success" in (result.stdout or "")), out
     except subprocess.TimeoutExpired:
-        return False, ("설치 시간이 너무 오래 걸려 중단했습니다(5분).\n"
-                       "PDA 화면에 설치 허용/확인 팝업이 떠 있지 않은지 확인하세요(팝업이 있으면 [허용]/[설치]를 눌러야 진행됩니다).\n"
-                       "팝업이 없으면 USB를 다시 꽂고 [연결 확인] 후 다시 시도하세요.")
+        pass
+    except Exception as e:  # noqa: BLE001
+        return False, f"설치 중 오류: {e}"
+    # 90초 안에 안 끝남 -> 복사 후 pm install
+    remote = "/data/local/tmp/kointbook_install.apk"
+    try:
+        try:
+            _run(["kill-server"], timeout=10)
+        except Exception:  # noqa: BLE001
+            pass
+        p = _run(["push", apk_path, remote], timeout=180)
+        if p.returncode != 0:
+            return False, "PDA로 설치파일 복사 실패:\n" + ((p.stdout or "") + (p.stderr or "")).strip()
+        r = _run(["shell", "pm", "install", "-r", "-d", "-t", remote], timeout=180)
+        out = ((r.stdout or "") + "\n" + (r.stderr or "")).strip()
+        try:
+            _run(["shell", "rm", "-f", remote], timeout=15)
+        except Exception:  # noqa: BLE001
+            pass
+        return ("Success" in (r.stdout or "")), out
+    except subprocess.TimeoutExpired:
+        return False, ("설치 시간이 너무 오래 걸려 중단했습니다.\n"
+                       "USB를 다시 꽂고 [연결 확인] 후 다시 시도하세요. 계속 안 되면 PDA를 재부팅해 보세요.")
     except Exception as e:  # noqa: BLE001
         return False, f"설치 중 오류: {e}"
 
