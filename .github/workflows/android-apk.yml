@@ -61,6 +61,7 @@ jobs:
           {
             echo "### KOINTBOOK.apk 빌드 성공"
             echo "- 서명: $SIGN_NOTE"
+            echo "- 서명 지문(SHA-256, PDA에 깔린 앱과 같은 키인지 비교용): $(keytool -printcert -jarfile app/build/outputs/apk/debug/KOINTBOOK.apk 2>/dev/null | grep 'SHA256:' | head -1 | sed 's/.*SHA256: *//')"
             echo "- 받기: 이 화면 아래 Artifacts의 KOINTBOOK-apk-${{ github.run_number }}"
           } >> "$GITHUB_STEP_SUMMARY"
 

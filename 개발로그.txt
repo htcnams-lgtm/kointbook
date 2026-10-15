@@ -20,6 +20,7 @@
 - 1.5.1  2026-10-15  PDA 위치입력 화면에 사용 가능한 AREA 안내 상자 (22차)
 - 1.5.2  2026-10-15  알림창 글씨 크게(PC 직접 만든 알림창, PDA 팝업 +2sp) (23차)
 - 1.5.3  2026-10-15  키 꾹 누름 오입력 방지, 초기화면·PC 상단 버전/카피라이트, 섹션 10-100 표기, 문구 안내 상자 (24차)
+- 1.5.4  2026-10-15  PDA 설치 뒤 화면 회전 설정 되돌리기, 서명 불일치 안내에 오류 내용, 빌드 서명 지문 표시 (25차)
 
 [2026-09-30] ZZOINT 개발 로그 반영 1차 (수량·금액 콤마 / DB 색인)
 ■ 이번에 반영한 것
@@ -453,3 +454,9 @@
 - PC Section Check/재고조사 진행현황: AREA+SECTION 표기를 "10100" 대신 "10-100"으로(ui_common.area_section_code에 sep 인자, 이 두 화면만 "-" 사용, 다른 보고서는 그대로).
 - PDA 위치입력: 문구 AREA면 서가번호 줄이 사라진 자리에 초록 테두리 "문구로 입력됩니다." 상자.
 - 변경 파일: ScanInputDetector/StockInputActivity/LocationInputActivity/SplashActivity.kt, activity_splash.xml, activity_location_input.xml, drawable/box_green_note.xml, pc_app/KOINTBOOK_pc.py, ui_common.py, screen_section_check.py, screen_progress_status.py, build.gradle(1.5.3/18), version.py
+
+[2026-10-15 25차] PDA 설치 뒤 자동회전 변경, 서명 다름 팝업
+- 증상: (1) 버전이 바뀌면 "서명이 달라 덮어쓸 수 없다" 팝업이 뜨고 한 번 더 설치하면 안 뜸. (2) 설치가 끝나면 PDA 화면 회전(가로/세로 고정)이 자동회전으로 바뀜.
+- 서명: 빌드(1.4.0, 1.5.0, 1.5.3)는 모두 Secrets 키로 서명됨(요약에 "PC와 같은 서명"). 팝업은 adb가 UPDATE_INCOMPATIBLE/signatures do not match를 돌려줄 때 뜨므로 PDA에 깔린 앱의 키가 이번 APK와 다른 경우다. 원인 확정 못 함 -> 빌드 요약에 APK 서명 지문(SHA-256)을 출력, PC 팝업에는 adb 오류 마지막 줄을 같이 보여줌(다음에 팝업이 뜨면 그 글과 지문으로 판단).
+- 회전: 앱 코드에는 회전 관련 코드가 없음. PC [PDA 앱 설치]가 설치 전에 settings(system) accelerometer_rotation/user_rotation을 읽어 두고, 앱 실행 3초 뒤 같은 값으로 되돌림(adb_utils.read/restore_rotation_settings). 되돌리기가 안 되는 기기는 그대로 넘어감. 실제 PDA 확인 필요.
+- 변경 파일: adb_utils.py, screen_pda_install.py, .github/workflows/android-apk.yml, build.gradle(1.5.4/19), version.py

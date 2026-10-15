@@ -429,6 +429,39 @@ def install_apk(apk_path: str):
     PDA의 "USB 설치 앱 검사"(package verifier)가 화면에 아무 팝업도 없이 오래 걸리는 경우가
     있어, 설치 전에 그 검사를 끄고(되는 기기만, 실패해도 무시), 그래도 90초 안에 안 끝나면
     adb install을 접고 APK를 PDA에 복사한 뒤 pm install로 직접 설치하는 방법으로 다시 시도한다."""
+    # [2026-10-15] "설치가 끝나면 PDA 화면 가로/세로 설정이 자동회전으로 바뀐다" 대응: 설치 전에 화면 회전
+    # 설정을 읽어 두었다가 설치 뒤 그대로 되돌린다(읽기/쓰기가 안 되는 기기는 그냥 넘어간다).
+    saved_rotation = read_rotation_settings()
+    try:
+        return _install_apk_inner(apk_path)
+    finally:
+        restore_rotation_settings(saved_rotation)
+
+
+def read_rotation_settings():
+    saved = {}
+    for key in ("accelerometer_rotation", "user_rotation"):
+        try:
+            r = _run(["shell", "settings", "get", "system", key], timeout=10)
+            val = (r.stdout or "").strip()
+            if val.lstrip("-").isdigit():
+                saved[key] = val
+        except Exception:  # noqa: BLE001
+            pass
+    return saved
+
+
+def restore_rotation_settings(saved):
+    # user_rotation(고정 방향)을 먼저, accelerometer_rotation(자동회전 켬/끔)을 나중에 넣는다.
+    for key in ("user_rotation", "accelerometer_rotation"):
+        if key in saved:
+            try:
+                _run(["shell", "settings", "put", "system", key, saved[key]], timeout=10)
+            except Exception:  # noqa: BLE001
+                pass
+
+
+def _install_apk_inner(apk_path: str):
     for cmd in (["shell", "settings", "put", "global", "verifier_verify_adb_installs", "0"],
                 ["shell", "settings", "put", "global", "package_verifier_enable", "0"]):
         try:

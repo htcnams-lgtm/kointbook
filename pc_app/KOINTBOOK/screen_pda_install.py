@@ -171,6 +171,7 @@ class PdaInstallScreen(tk.Frame):
 
     def _do_install(self, apk, reinstall):
         def work(progress):
+            saved_rot = adb_utils.read_rotation_settings()   # 설치 뒤 화면 회전 설정을 되돌리려고 미리 읽어 둠
             if reinstall:
                 progress(message="기존 앱 삭제 중...", done=0, total=0)
                 adb_utils.uninstall_app()
@@ -181,6 +182,10 @@ class PdaInstallScreen(tk.Frame):
             progress(message="설치 확인 및 앱 실행 중...", done=0, total=0)
             info = adb_utils.get_installed_info()
             launched = adb_utils.launch_app()
+            # 앱 실행 직후에 PDA가 회전 설정을 바꾸는 경우가 있어, 잠시 뒤 한 번 더 원래대로 돌려 놓는다.
+            import time
+            time.sleep(3)
+            adb_utils.restore_rotation_settings(saved_rot)
             return ("ok", launched, info)
 
         def done(result, error):
@@ -202,7 +207,8 @@ class PdaInstallScreen(tk.Frame):
                         "PDA에 이미 설치된 앱과 서명이 달라 덮어쓸 수 없습니다.\n\n"
                         "기존 앱을 삭제하고 다시 설치할까요?\n"
                         "※ 삭제하면 PDA 앱 안에 남아있는 실사 데이터도 함께 지워집니다.\n"
-                        "   필요한 데이터는 먼저 [PDA Data 수신]으로 받아두세요.", icon="warning"):
+                        "   필요한 데이터는 먼저 [PDA Data 수신]으로 받아두세요.\n\n"
+                        "(설치 오류 내용: " + (payload.strip().splitlines() or [""])[-1][:150] + ")", icon="warning"):
                     self._do_install(apk, reinstall=True)
             else:
                 self.lbl_msg.config(text="PDA 앱 설치에 실패했습니다.\n" + payload, fg="#B03030")
