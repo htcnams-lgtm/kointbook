@@ -195,6 +195,73 @@
 
         <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
 
+        <!-- [2026-10-15] 사용 가능한 AREA 안내 상자(사용자 선택 C안). 값은 AppState.AREA_RULE_TEXT와 같다. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:orientation="vertical"
+            android:background="@drawable/box_yellow"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="사용 가능한 AREA"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="wrap_content"
+                    android:text="서적"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:textSize="15sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="10~19, 90~99"
+                    android:textColor="#000000"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="wrap_content"
+                    android:text="문구"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:textSize="15sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="20~29, 80~89"
+                    android:textColor="#000000"
+                    android:textSize="15sp" />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:text="서가번호 없음"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnMaxQty"
             android:layout_width="wrap_content"
