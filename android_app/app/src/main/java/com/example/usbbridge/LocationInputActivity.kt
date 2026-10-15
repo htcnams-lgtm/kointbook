@@ -78,20 +78,36 @@ class LocationInputActivity : BaseActivity() {
     private lateinit var etSection: EditText
     private lateinit var etShelfNo: EditText
     private lateinit var fields: List<EditText>
-    private lateinit var btnKind: android.widget.Button
     private lateinit var rowShelf: android.view.View
 
-    // 문구 모드는 AREA -> SECTION 두 칸만 쓴다(서가번호는 "X" 고정 저장).
-    private fun lastIndex(): Int = if (AppState.isStationery) 1 else fields.size - 1
+    // [2026-10-15] 서적/문구는 AREA 번호로 정해진다(AppState.kindOfArea). 문구(20~29, 80~89)는
+    // AREA -> SECTION 두 칸만 쓰고 서가번호는 X로 저장한다.
+    private fun currentKind(): String? = AppState.kindOfArea(etArea.text.toString())
+    private fun isStationeryNow(): Boolean = currentKind() == AppState.KIND_STATIONERY
+    private fun lastIndex(): Int = if (isStationeryNow()) 1 else fields.size - 1
 
     private fun applyKind() {
-        val st = AppState.isStationery
-        btnKind.text = "구분: ${AppState.itemKind}" + if (st) "  (서가번호 없음)" else ""
+        val st = isStationeryNow()
         rowShelf.visibility = if (st) android.view.View.GONE else android.view.View.VISIBLE
         findViewById<TextView>(R.id.tvTitleBarText).text =
             if (st) "KOINTBOOK [문구 위치입력]" else "KOINTBOOK [위치입력]"
         etSection.imeOptions = if (st) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NEXT
         etSection.nextFocusDownId = if (st) R.id.etSection else R.id.etShelfNo
+    }
+
+    /** AREA가 서적/문구 범위 밖이면 경고 후 그 칸에 머문다. 통과하면 true. */
+    private fun checkAreaAllowed(): Boolean {
+        val text = etArea.text.toString().trim()
+        if (AppState.kindOfArea(text) != null) return true
+        SoundUtil.zzointWarning(this)
+        Dialogs.info(
+            activity = this,
+            title = "경고",
+            message = "사용할 수 없는 AREA입니다.\n(${AppState.AREA_RULE_TEXT.replace("\n", " / ")})"
+        )
+        etArea.requestFocus()
+        etArea.selectAll()
+        return false
     }
 
     // 물리 스캔버튼은 "지금 어느 칸을 채워야 하는지"를 모르고 그냥 한
@@ -139,7 +155,6 @@ class LocationInputActivity : BaseActivity() {
         etSection = findViewById(R.id.etSection)
         etShelfNo = findViewById(R.id.etShelfNo)
         fields = listOf(etArea, etSection, etShelfNo)
-        btnKind = findViewById(R.id.btnKind)
         rowShelf = findViewById(R.id.rowShelf)
 
         for ((index, field) in fields.withIndex()) {
@@ -192,8 +207,6 @@ class LocationInputActivity : BaseActivity() {
                         if (index > 0) {
                             fields[index - 1].requestFocus()
                             fields[index - 1].selectAll()
-                        } else {
-                            btnKind.requestFocus()
                         }
                         true
                     }
@@ -204,22 +217,14 @@ class LocationInputActivity : BaseActivity() {
 
         setFieldText(0, AppState.currentArea)
         setFieldText(1, AppState.currentSection)
-        setFieldText(2, if (AppState.isStationery || AppState.currentShelfNo == AppState.STATIONERY_SHELF_NO) "" else AppState.currentShelfNo)
+        setFieldText(2, if (AppState.currentShelfNo == AppState.STATIONERY_SHELF_NO) "" else AppState.currentShelfNo)
 
-        btnKind.setOnClickListener {
-            AppState.itemKind = if (AppState.isStationery) AppState.KIND_BOOK else AppState.KIND_STATIONERY
-            AppState.persistLocation(this)
-            applyKind()
-            etArea.requestFocus()
-            etArea.selectAll()
-        }
-        btnKind.setOnKeyListener { _, keyCode, keyEvent ->
-            if (keyEvent.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                etArea.requestFocus()
-                etArea.selectAll()
-                true
-            } else false
-        }
+        // AREA 칸 값이 바뀔 때마다 서적/문구에 맞춰 서가번호 줄을 보이거나 숨긴다.
+        etArea.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) {}
+            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { applyKind() }
+        })
         applyKind()
 
         findViewById<android.widget.Button>(R.id.btnMaxQty).setOnClickListener {
@@ -293,6 +298,7 @@ class LocationInputActivity : BaseActivity() {
             fields[index].selectAll()
             return
         }
+        if (index == 0 && !checkAreaAllowed()) return
         if (index < lastIndex()) {
             val next = fields[index + 1]
             next.requestFocus()
@@ -336,10 +342,10 @@ class LocationInputActivity : BaseActivity() {
     private fun enterLocation() {
         val area = etArea.text.toString().trim()
         val section = etSection.text.toString().trim()
-        val shelfNo = if (AppState.isStationery) AppState.STATIONERY_SHELF_NO else etShelfNo.text.toString().trim()
+        val shelfNo = if (isStationeryNow()) AppState.STATIONERY_SHELF_NO else etShelfNo.text.toString().trim()
         if (area.isEmpty() || section.isEmpty() || shelfNo.isEmpty()) {
             Toast.makeText(this,
-                if (AppState.isStationery) "AREA/SECTION을 모두 입력하세요." else "AREA/SECTION/서가번호를 모두 입력하세요.",
+                if (isStationeryNow()) "AREA/SECTION을 모두 입력하세요." else "AREA/SECTION/서가번호를 모두 입력하세요.",
                 Toast.LENGTH_SHORT).show()
             when {
                 area.isEmpty() -> etArea.requestFocus()
@@ -356,6 +362,7 @@ class LocationInputActivity : BaseActivity() {
             etArea.selectAll()
             return
         }
+        if (!checkAreaAllowed()) return
         if (section.length != 3) {
             Toast.makeText(this, "SECTION은 3자리로 입력하세요.", Toast.LENGTH_SHORT).show()
             etSection.requestFocus()
