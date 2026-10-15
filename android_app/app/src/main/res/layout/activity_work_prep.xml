@@ -37,11 +37,11 @@
                 android:background="@drawable/edit_classic"
                 android:paddingStart="9dp"
                 android:paddingEnd="9dp"
-                android:paddingTop="7dp"
-                android:paddingBottom="7dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
                 android:textSize="17sp"
                 android:textColor="@color/text_primary"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="15dp"
                 android:text="KOINTBOOK / KOINTBOOK" />
 
             <!-- 작업자 -->
@@ -57,7 +57,7 @@
                 android:paddingEnd="9dp"
                 android:paddingTop="4dp"
                 android:paddingBottom="4dp"
-                android:layout_marginBottom="10dp">
+                android:layout_marginBottom="15dp">
 
                 <EditText
                     android:id="@+id/etWorkerCode"
@@ -95,7 +95,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="10dp">
+                android:layout_marginBottom="15dp">
 
                 <TextView
                     android:id="@+id/tvItemCount"
@@ -105,8 +105,8 @@
                     android:background="@drawable/edit_classic"
                     android:paddingStart="9dp"
                     android:paddingEnd="9dp"
-                    android:paddingTop="7dp"
-                    android:paddingBottom="7dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
                     android:textSize="17sp"
                     android:textColor="@color/text_primary"
                     android:text="0" />
@@ -134,7 +134,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/edit_classic"
-                android:padding="8dp"
+                android:padding="10dp"
                 android:layout_marginBottom="4dp">
 
                 <!-- [2026-09-30] "받은 마스터: 상품 N건 글자크기 2사이즈 크게" -
