@@ -155,10 +155,10 @@ def raw_rows(app, kind="전체"):
     else:
         rows = _fetch_counts(app.state.store_code, app.state.survey_date)
     # [2026-10-15] 조사일자 열은 뺐다(조회 기준일 뿐). 스캔한 일시는 실사일자/실사시간 두 열로 나눠 보여준다.
-    headers = ("점포코드", "AREA", "SECTION", "서가번호", "단", "열", "바코드", "상품명",
-               "조사수량", "작업자코드", "작업자명", "실사일자", "실사시간")
-    data = [(r["store_code"], r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"],
-             r["isbn"], r["book_name"], r["qty"], r["worker_code"], r["worker_name"],
+    headers = ("점포코드", "바코드", "상품명", "조사수량", "AREA", "SECTION", "서가번호", "단", "열",
+               "작업자코드", "작업자명", "실사일자", "실사시간")
+    data = [(r["store_code"], r["isbn"], r["book_name"], r["qty"], r["area"], r["section"], r["shelf_no"],
+             r["dan"], r["yeol"], r["worker_code"], r["worker_name"],
              *split_scan_datetime(r["received_at"], r["survey_date"]))
             for r in rows]
     return headers, data
