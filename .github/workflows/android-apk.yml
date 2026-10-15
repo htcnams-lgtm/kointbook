@@ -96,7 +96,10 @@ jobs:
       - name: 패키지 설치
         run: pip install openpyxl pywin32 pyinstaller
 
+      # 윈도우 러너의 기본 글자 방식(cp1252)은 spec 파일이 한글 안내문을 출력할 때 오류가 나서 UTF-8로 맞춘다.
       - name: exe 빌드
+        env:
+          PYTHONUTF8: '1'
         run: pyinstaller KOINTBOOK.spec
 
       - uses: actions/upload-artifact@v4
