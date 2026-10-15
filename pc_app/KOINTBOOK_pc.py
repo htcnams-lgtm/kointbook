@@ -43,6 +43,8 @@ import os
 import tkinter as tk
 from pathlib import Path
 
+from KOINTBOOK.version import APP_VERSION
+
 def _fatal_start_error():
     """[2026-10-13] 시작 중(불러오기 단계)에 오류가 나도 창이 바로 닫히지 않게, 오류 내용을 화면에
     보여주고 error_log.txt에도 저장한 뒤 Enter를 기다린다. (파일이 일부만 교체됐거나 빠졌을 때 등)"""
@@ -192,7 +194,7 @@ class KointBookPcApp:
             for name in items:
                 self._group_of[name] = group_label
 
-        root.title("KOINTBOOK")
+        root.title(f"KOINTBOOK v{APP_VERSION}")
         try:
             root.state("zoomed")
         except Exception:
@@ -396,7 +398,7 @@ class KointBookPcApp:
                     pass
                 frame._show_key = key + (dbmod.data_version(),)
 
-        self.root.title(f"KOINTBOOK - [{name}]")
+        self.root.title(f"KOINTBOOK v{APP_VERSION} - [{name}]")
 
 
 def _set_app_icon(root: tk.Tk) -> None:

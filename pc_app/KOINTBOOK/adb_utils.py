@@ -429,7 +429,9 @@ def install_apk(apk_path: str):
         out = ((result.stdout or "") + "\n" + (result.stderr or "")).strip()
         return ("Success" in (result.stdout or "")), out
     except subprocess.TimeoutExpired:
-        return False, "설치 시간이 너무 오래 걸려 중단했습니다."
+        return False, ("설치 시간이 너무 오래 걸려 중단했습니다(5분).\n"
+                       "PDA 화면에 설치 허용/확인 팝업이 떠 있지 않은지 확인하세요(팝업이 있으면 [허용]/[설치]를 눌러야 진행됩니다).\n"
+                       "팝업이 없으면 USB를 다시 꽂고 [연결 확인] 후 다시 시도하세요.")
     except Exception as e:  # noqa: BLE001
         return False, f"설치 중 오류: {e}"
 
