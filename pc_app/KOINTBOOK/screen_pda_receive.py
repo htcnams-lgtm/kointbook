@@ -118,11 +118,13 @@ class PdaReceiveScreen(tk.Frame):
         # [2026-09-28] 아래 "작업자별 실사집계" 목록이 10명 이상 한 화면에
         # 보이도록, 이 "수신 대기" 목록 높이를 13 -> 7로 줄였다.
         container, self.tree = setup_treeview(mid, STAGE_COLUMNS, STAGE_HEADINGS, STAGE_WIDTHS, height=7)
+        # [2026-10-15] 창을 줄이면 저장/삭제 버튼이 목록 오른쪽 밖으로 밀려 안 보여서, 버튼을
+        # 먼저(오른쪽 끝) 배치하고 목록이 남는 폭만큼만 차지하게(넘치면 가로 스크롤) 바꿨다.
+        side_btns = tk.Frame(mid, bg=CL_BG)
+        side_btns.pack(side=tk.RIGHT, fill=tk.Y, padx=6)
         container.pack(side=tk.LEFT, fill=tk.Y)
 
         self.tree.tag_configure("dup", background=COLOR_DUP_ROW)
-        side_btns = tk.Frame(mid, bg=CL_BG)
-        side_btns.pack(side=tk.LEFT, fill=tk.Y, padx=6)
         win_button(side_btns, text="저장", width=8, command=self.save_staged, kind="accent").pack(pady=(40, 6))
         win_button(side_btns, text="삭제", width=8, command=self.delete_selected_staged, kind="danger").pack()
 

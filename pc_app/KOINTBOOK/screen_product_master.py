@@ -100,17 +100,17 @@ class ProductMasterScreen(tk.Frame):
         # 계열과 "전송" 버튼이 헷갈리지 않게 구분했다.
         # [2026-10-13] 서적/문구는 파일 양식이 달라서 불러오기 버튼을 둘로 나눴다(각각 같은 구분만 교체).
         imp = tk.Frame(top, bg=COLOR_HEADER_BG)
-        imp.grid(row=0, column=7, padx=(0, 20))
+        imp.grid(row=1, column=0, columnspan=4, sticky="w", padx=(12, 0), pady=(0, 8))
         win_button(imp, text="서적 불러오기", command=lambda: self.import_kind("서적"), kind="normal").pack(side=tk.LEFT, padx=(0, 4))
         win_button(imp, text="문구 불러오기", command=lambda: self.import_kind("문구"), kind="normal").pack(side=tk.LEFT)
-        win_button(top, text="⬆ PDA전송", command=self.send_to_pda, kind="normal").grid(row=0, column=8, padx=(0, 14))
+        win_button(top, text="⬆ PDA전송", command=self.send_to_pda, kind="normal").grid(row=1, column=4, padx=(0, 14), pady=(0, 8))
 
         # [2026-10-08] 미등록 상품(상품마스터에 없는 바코드) 입력 정책 - PDA 재고입력(전송 시 함께 전달)과
         # PC 실적관리 입력·수정이 같은 값을 쓴다.
-        tk.Label(top, text="미등록상품", bg=COLOR_HEADER_BG, fg=CL_TEXT_DIM).grid(row=0, column=9, padx=(10, 4))
+        tk.Label(top, text="미등록상품", bg=COLOR_HEADER_BG, fg=CL_TEXT_DIM).grid(row=1, column=5, padx=(10, 4), pady=(0, 8))
         self.cb_unreg = ttk.Combobox(top, values=dbmod.UNREG_POLICIES, state="readonly", width=11)
         self.cb_unreg.set(dbmod.get_unreg_policy())
-        self.cb_unreg.grid(row=0, column=10, padx=(0, 12))
+        self.cb_unreg.grid(row=1, column=6, padx=(0, 12), pady=(0, 8))
         self.cb_unreg.bind("<<ComboboxSelected>>", lambda e: dbmod.set_setting("unreg_policy", self.cb_unreg.get()))
 
         # ---- 조회 줄 ----
