@@ -129,6 +129,7 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
                 book_name TEXT,
                 category TEXT,
                 publisher TEXT,
+                kind TEXT DEFAULT '',
                 PRIMARY KEY (store_code, isbn)
             )
             """.trimIndent()
@@ -172,6 +173,17 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
         if (db.isReadOnly) return
+        // [2026-10-16] 상품마스터에 서적/문구 구분(kind) 열이 없는 옛 DB는 열만 덧붙인다.
+        // (DB_VERSION을 올리면 onUpgrade가 표를 전부 지워서 실사 데이터가 사라지므로 올리지 않는다.)
+        try {
+            var hasKind = false
+            db.rawQuery("PRAGMA table_info(books)", null).use { c ->
+                while (c.moveToNext()) if (c.getString(1) == "kind") hasKind = true
+            }
+            if (!hasKind) db.execSQL("ALTER TABLE books ADD COLUMN kind TEXT DEFAULT ''")
+        } catch (_: Exception) {
+            // 열을 못 붙여도 서적/문구 판정은 바코드 모양 기준으로 동작한다.
+        }
         try {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_books_store ON books(store_code, isbn)")
             // [2026-10-08] findBook()은 isbn을 COLLATE NOCASE(대소문자 무시)로 찾는데, 위 색인은
@@ -277,7 +289,7 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
         }
     }
 
-    fun upsertBook(storeCode: String, isbn: String, bookName: String, category: String, publisher: String) {
+    fun upsertBook(storeCode: String, isbn: String, bookName: String, category: String, publisher: String, kind: String = "") {
         val db = writableDatabase
         val cv = ContentValues()
         cv.put("store_code", storeCode)
@@ -285,6 +297,7 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
         cv.put("book_name", bookName)
         cv.put("category", category)
         cv.put("publisher", publisher)
+        cv.put("kind", kind)
         db.insertWithOnConflict("books", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
         invalidateBookCount()
     }
@@ -306,7 +319,7 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
     }
 
     private fun bookInsertStatement(localDb: SQLiteDatabase) = localDb.compileStatement(
-        "INSERT OR REPLACE INTO books (store_code, isbn, book_name, category, publisher) VALUES (?,?,?,?,?)"
+        "INSERT OR REPLACE INTO books (store_code, isbn, book_name, category, publisher, kind) VALUES (?,?,?,?,?,?)"
     )
 
     /**
@@ -316,7 +329,8 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
      * 비활성 상태로 유지되도록 한다.
      *
      * BOOK.db는 KOINTBOOK PC의 pda_transfer.push_books()가 만드는 파일로,
-     * 테이블명은 book_data (store_code, isbn, book_name, category, publisher)다
+     * 테이블명은 book_data (store_code, isbn, book_name, category, publisher, kind)다
+     * (kind = '서적'|'문구', 1.5.15부터. 옛 파일엔 없을 수 있다)
      * (ZZOINT의 PRODUCT.db/product_data에 대응).
      *
      * @param onProgress (안내문구, 처리한 건수, 전체 건수)
@@ -434,8 +448,15 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
                         }
                     } catch (_: Exception) { }
                     val stmt = bookInsertStatement(localDb)
+                    // [2026-10-16] PC가 서적/문구 구분(kind)을 같이 보낸다. 옛 PC 파일엔 이 열이 없으니
+                    // 있을 때만 읽고, 없으면 빈 값으로 둔다(그 경우 서적/문구는 바코드 모양으로 판정).
+                    var fileHasKind = false
+                    ext.rawQuery("PRAGMA table_info(book_data)", null).use { c ->
+                        while (c.moveToNext()) if (c.getString(1) == "kind") fileHasKind = true
+                    }
                     ext.rawQuery(
-                        "SELECT store_code, isbn, book_name, category, publisher FROM book_data", null
+                        "SELECT store_code, isbn, book_name, category, publisher, " +
+                            (if (fileHasKind) "kind" else "''") + " FROM book_data", null
                     ).use { c ->
                         while (c.moveToNext()) {
                             stmt.clearBindings()
@@ -444,6 +465,7 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
                             stmt.bindText(3, c.getString(2) ?: "")
                             stmt.bindText(4, c.getString(3) ?: "")
                             stmt.bindText(5, c.getString(4) ?: "")
+                            stmt.bindText(6, c.getString(5) ?: "")
                             stmt.executeInsert()
                             bookCount++
                             if (bookCount % 2000 == 0) onProgress?.invoke("상품마스터(도서) 저장 중...", bookCount, total)
@@ -527,7 +549,11 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
     }
 
     // ---------- books ----------
-    data class BookInfo(val isbn: String, val bookName: String, val category: String, val publisher: String)
+    /** kind = 상품마스터의 서적/문구 구분("서적" | "문구"), 옛 마스터는 빈 값 */
+    data class BookInfo(
+        val isbn: String, val bookName: String, val category: String, val publisher: String,
+        val kind: String = ""
+    )
 
     /** ISBN으로 도서마스터에서 찾는다. store_code+isbn이 기본키라 결과는 0건 또는 1건뿐이다
      * (ZZOINT의 findMatchingProducts처럼 "같은 바코드에 자사코드가 여러 개"인 경우가
@@ -542,13 +568,25 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
      * 같은 표기로 맞춰진다. */
     fun findBook(storeCode: String, isbn: String): BookInfo? {
         val db = readableDatabase
+        return try {
+            queryBook(db, storeCode, isbn, withKind = true)
+        } catch (_: android.database.sqlite.SQLiteException) {
+            // kind 열을 아직 못 붙인 DB(읽기 전용으로 열린 경우 등)에서도 스캔은 계속 된다.
+            queryBook(db, storeCode, isbn, withKind = false)
+        }
+    }
+
+    private fun queryBook(db: SQLiteDatabase, storeCode: String, isbn: String, withKind: Boolean): BookInfo? {
         db.rawQuery(
-            "SELECT isbn, book_name, category, publisher FROM books " +
+            "SELECT isbn, book_name, category, publisher" + (if (withKind) ", kind" else "") + " FROM books " +
                 "WHERE store_code = ? AND isbn = ? COLLATE NOCASE",
             arrayOf(storeCode, isbn)
         ).use { c ->
             return if (c.moveToFirst()) {
-                BookInfo(c.getString(0) ?: "", c.getString(1) ?: "", c.getString(2) ?: "", c.getString(3) ?: "")
+                BookInfo(
+                    c.getString(0) ?: "", c.getString(1) ?: "", c.getString(2) ?: "", c.getString(3) ?: "",
+                    if (withKind) (c.getString(4) ?: "") else ""
+                )
             } else null
         }
     }

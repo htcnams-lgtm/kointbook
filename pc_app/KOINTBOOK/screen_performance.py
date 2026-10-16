@@ -50,6 +50,7 @@ from datetime import datetime
 from tkinter import messagebox, ttk
 from . import db as dbmod
 from . import scope
+from . import barcode_kind
 from .virtual_table import VirtualTable
 from .ui_common import (
     center_on_app,
@@ -96,6 +97,22 @@ def _confirm_unregistered(popup, verb):
                                "(상품마스터 화면의 [미등록상품] 설정: 차단)", parent=popup)
         return False
     return messagebox.askyesno("확인", f"상품마스터에 없는 바코드입니다.\n그래도 {verb}하시겠습니까?", parent=popup)
+
+
+def _kind_blocked(popup, store_code, area, code):
+    """[2026-10-16] 서적 AREA에 문구 상품(문구 AREA에 서적 상품)을 넣으려 하면 경고음 + 안내 후 True.
+    PDA의 입력 금지(BarcodeKind.kt)와 같은 기준이다(상품마스터 구분 우선, 마스터에 없으면 바코드 모양)."""
+    conn = dbmod.get_conn()
+    try:
+        m = barcode_kind.check(conn, store_code, area, code)
+        name = barcode_kind.master_name(conn, store_code, code) if m else ""
+    finally:
+        conn.close()
+    if m is None:
+        return False
+    popup.bell()
+    messagebox.showerror(f"입력 금지 - {m['item_kind']} 상품", barcode_kind.message(m, name), parent=popup)
+    return True
 
 
 class PerformanceScreen(tk.Frame):
@@ -603,6 +620,10 @@ class PerformanceScreen(tk.Frame):
             book_name = r["book_name"]
             isbn_changed = isbn != (r["isbn"] or "")
             if isbn_changed:
+                # [2026-10-16] 바코드를 바꿀 때는 이 줄의 AREA(서적/문구)에 맞는 상품이어야 한다.
+                if _kind_blocked(popup, r["store_code"], r["area"], isbn):
+                    e_isbn.focus_set()
+                    return
                 b = find_book(isbn)
                 if b is None:
                     # [2026-09-30] "마스터에없는 미등록바코드 입력되어 팝업창이
@@ -749,13 +770,26 @@ class PerformanceScreen(tk.Frame):
             key = self._loc_txt(*loc_of(x))
             sources[key] = sources.get(key, 0) + 1
             items.append(dict(
-                id=x["id"], dan=str(dan), yeol=str(yeol),
+                id=x["id"], isbn=x["isbn"], dan=str(dan), yeol=str(yeol),
                 worker_code=worker[0] if worker else x["worker_code"],
                 worker_name=worker[1] if worker else x["worker_name"],
                 old=(x["area"], x["section"], x["shelf_no"], x["dan"], x["yeol"], x["worker_code"], x["worker_name"]),
             ))
         return dict(items=items, sources=list(sources.items()), skipped=skipped,
                     dan=str(dan), has_existing=bool(existing), worker=worker)
+
+    def _kind_conflicts(self, plan, target):
+        """[2026-10-16] 위치를 target AREA로 옮길 때 서적/문구 구분이 안 맞게 되는 줄 [(item, 정보)]."""
+        items = plan["items"]
+        if not items:
+            return []
+        conn = dbmod.get_conn()
+        try:
+            res = barcode_kind.check_many(conn, self.app.state.store_code,
+                                          [(target[0], it["isbn"]) for it in items])
+        finally:
+            conn.close()
+        return [(it, m) for it, m in zip(items, res) if m]
 
     def _apply_location_plan(self, plan, target):
         """_plan_location_move 결과를 DB에 반영하고, 마지막 수정 1회를 [수정 취소]용으로 기억한다."""
@@ -918,6 +952,10 @@ class PerformanceScreen(tk.Frame):
                 lines.append("⚠ 서로 다른 위치가 섞여 있습니다 - 모두 한 곳으로 합쳐집니다")
             if plan["skipped"]:
                 lines.append(f"※ 이미 {tgt_txt}에 있는 {plan['skipped']:,}건은 제외됩니다")
+            kind_bad = self._kind_conflicts(plan, tgt)
+            if kind_bad:
+                lines.append(f"⛔ {tgt[0]} AREA({scope.kind_of_area(tgt[0])})와 서적/문구 구분이 맞지 않는 줄 "
+                             f"{len(kind_bad):,}건 - 이대로는 수정할 수 없습니다")
             lbl_prev.config(text="\n".join(lines))
 
         def do_apply():
@@ -932,6 +970,18 @@ class PerformanceScreen(tk.Frame):
                 messagebox.showinfo("알림", "선택한 줄이 모두 이미 이 위치에 있습니다.", parent=popup)
                 return
             tgt_txt = self._loc_txt(*tgt)
+            # [2026-10-16] 옮겨 갈 AREA가 서적이면 서적 상품만, 문구면 문구 상품만 들어갈 수 있다.
+            kind_bad = self._kind_conflicts(plan, tgt)
+            if kind_bad:
+                popup.bell()
+                ex = "\n".join(f"· {barcode_kind.short(m)}" for _it, m in kind_bad[:6])
+                more = f"\n  … 외 {len(kind_bad) - 6:,}건" if len(kind_bad) > 6 else ""
+                messagebox.showerror(
+                    "위치 수정 불가 - 서적/문구 구분",
+                    f"선택한 줄 중 {len(kind_bad):,}건이 {tgt[0]} AREA({scope.kind_of_area(tgt[0])})에 "
+                    f"들어갈 수 없는 상품입니다.\n수정하지 않았습니다.\n\n{ex}{more}\n\n"
+                    "해당 줄을 빼고 선택하거나, 맞는 구분의 AREA로 수정하세요.", parent=popup)
+                return
             if len(plan["sources"]) > 1:
                 src = self._fmt_sources(plan["sources"])
                 if not messagebox.askyesno(
@@ -1247,6 +1297,12 @@ class PerformanceScreen(tk.Frame):
                 qty = int(qty_s)
             except ValueError:
                 messagebox.showinfo("알림", "수량은 숫자로 입력하세요.", parent=popup)
+                return
+
+            # [2026-10-16] 서적 AREA에 문구 상품, 문구 AREA에 서적 상품은 등록할 수 없다.
+            if _kind_blocked(popup, self.app.state.store_code, area, isbn):
+                e_isbn.focus_set()
+                e_isbn.selection_range(0, tk.END)
                 return
 
             compute_from_location()
