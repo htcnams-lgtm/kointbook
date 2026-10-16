@@ -68,41 +68,6 @@ from .masters import norm_barcode, bc13, disp_qty, disp_exc
 from . import scope
 
 
-# ---- 내용에 날짜가 들어가는 파일: "날짜 고정" 선택 -----------------------------------------
-# [2026-10-16] 자료생성으로 나가는 파일 중 안에 날짜가 적히는 것은 아래 4가지다(서적 txt·xlsx 4종과 문구
-# 납품로케이션·결과확인리스트·로케이션별 스캔리스트에는 날짜가 없다). 항목마다 사용자가 자료생성 화면에서
-# "상품마스터에서 세팅한 조사일자로 고정"을 켜고 끌 수 있고, 켜면 그 파일 안의 날짜 칸이 전부 조사일자가 된다.
-# 끄면 실제로 스캔한 날짜(실사일자)가 그대로 나간다(납품상세데이터는 끄면 줄마다 스캔한 날짜).
-# 시간(실사시간)은 건드리지 않는다. 설정은 DB(app_settings)에 저장돼 다음에 켜도 유지된다.
-FIX_DATE_ITEMS = (
-    # (키, 화면에 보일 이름, 날짜가 들어가는 자리, 기본값)
-    ("det", "문구 납품상세데이터 (txt·xlsx)", "1열 조사일자", True),
-    ("unreg", "미등록상품 자료.xlsx", "실사일자 열", False),
-    ("areasum", "합산자료(AREA).xlsx", "실사일자 열", False),
-    ("raw", "실사자료 엑셀저장·출력", "실사일자 열", False),
-)
-_FIX_DEFAULT = {k: d for k, _n, _w, d in FIX_DATE_ITEMS}
-
-
-def fix_date_on(key):
-    """이 파일의 내용 날짜를 조사일자로 고정하는 중이면 True."""
-    v = dbmod.get_setting("gen_fixdate_" + key, None)
-    if v is None or v == "":
-        return _FIX_DEFAULT.get(key, False)
-    return str(v) == "1"
-
-
-def set_fix_date(key, on):
-    dbmod.set_setting("gen_fixdate_" + key, "1" if on else "0")
-
-
-def _content_date(app, received_at, row_survey_date, fix):
-    """파일 안에 적을 날짜(YYYYMMDD): 고정이면 조사일자, 아니면 스캔한 날짜."""
-    if fix:
-        return file_date(app)
-    return split_scan_datetime(received_at, row_survey_date)[0]
-
-
 def output_dir(app, kind=None):
     """생성 폴더. kind가 '서적'/'문구'면 그 아래 '서적전용'/'문구전용' 하위 폴더."""
     date = file_date(app)
@@ -180,11 +145,10 @@ def _fetch_ledger_map(store_code):
     return {r["isbn"]: r for r in rows}
 
 
-def raw_rows(app, kind="전체", fix_key="raw"):
+def raw_rows(app, kind="전체"):
     """실사원자료: stock_counts를 그대로 (엑셀저장/재집계 그리드용 - 자료①,
     ②생성 버튼과는 별개다. 그 버튼은 아래 kyobo_data*_lines()를 쓴다).
-    kind가 '서적'/'문구'면 그 구분 행만 (구분 기준은 split_counts 참고).
-    fix_key: 날짜 고정 선택 항목 키('raw' 실사자료 / 'areasum' 합산자료) - 켜져 있으면 실사일자 칸을 조사일자로."""
+    kind가 '서적'/'문구'면 그 구분 행만 (구분 기준은 split_counts 참고)."""
     if kind in scope.KINDS:
         b, s, _m = split_counts(app)
         rows = s if kind == "문구" else b
@@ -193,13 +157,10 @@ def raw_rows(app, kind="전체", fix_key="raw"):
     # [2026-10-15] 조사일자 열은 뺐다(조회 기준일 뿐). 스캔한 일시는 실사일자/실사시간 두 열로 나눠 보여준다.
     headers = ("점포코드", "바코드", "상품명", "조사수량", "AREA", "SECTION", "서가번호", "단", "열",
                "작업자코드", "작업자명", "실사일자", "실사시간")
-    fix = fix_date_on(fix_key)
-    data = []
-    for r in rows:
-        scan_date, scan_time = split_scan_datetime(r["received_at"], r["survey_date"])
-        data.append((r["store_code"], r["isbn"], r["book_name"], r["qty"], r["area"], r["section"], r["shelf_no"],
-                     r["dan"], r["yeol"], r["worker_code"], r["worker_name"],
-                     file_date(app) if fix else scan_date, scan_time))
+    data = [(r["store_code"], r["isbn"], r["book_name"], r["qty"], r["area"], r["section"], r["shelf_no"],
+             r["dan"], r["yeol"], r["worker_code"], r["worker_name"],
+             *split_scan_datetime(r["received_at"], r["survey_date"]))
+            for r in rows]
     return headers, data
 
 
@@ -448,11 +409,10 @@ def _clean_text(s):
 def stat_detail_rows(app, stat_rows=None, stat=None):
     """납품상세데이터: 스캔 1건당 1행.
     (조사일자, 납품처, 바코드, 수량, 구분코드, 단가+종류코드+위치, 페이지, 줄번호, 상품명)
-    조사일자 칸은 "날짜 고정"(FIX_DATE_ITEMS의 det)이 켜져 있으면 상품마스터에서 세팅한 조사일자,
-    꺼져 있으면 그 줄을 스캔한 날짜. 수량·페이지·줄번호는 정수, 나머지는 글자."""
+    조사일자 칸은 항상 상품마스터에서 세팅한 조사일자(스캔한 날짜가 아님). 수량·페이지·줄번호는 정수, 나머지는 글자."""
     if stat_rows is None or stat is None:
         _b, stat_rows, stat = split_counts(app)
-    fix = fix_date_on("det")
+    date = file_date(app)
     by_loc = {}
     for r in stat_rows:
         isbn = str(r["isbn"] or "").strip()
@@ -475,7 +435,6 @@ def stat_detail_rows(app, stat_rows=None, stat=None):
             for seq, r in enumerate(sorted(pages[key], key=lambda x: x["id"]), start=1):
                 isbn = str(r["isbn"]).strip()
                 name, price, dvsn, kcode, rdp = stat.get(norm_barcode(isbn), ("", 0, "", "", ""))
-                date = _content_date(app, r["received_at"], r["survey_date"], fix)
                 rows.append((date, rdp, bc13(isbn), r["qty"] or 0, dvsn, f"{price}{kcode}{loc}", pno, seq, name))
     return rows
 
@@ -664,14 +623,9 @@ def unregistered_rows(app):
     registered = {norm_barcode(r["isbn"]) for r in conn.execute("SELECT isbn FROM books WHERE store_code=?", (store_code,))}
     conn.close()
     headers = ("AREA", "SECTION", "서가번호", "단", "열", "바코드", "상품명", "조사수량", "작업자명", "실사일자", "실사시간")
-    fix = fix_date_on("unreg")
-    data = []
-    for r in rows:
-        if norm_barcode(r["isbn"]) in registered:
-            continue
-        scan_date, scan_time = split_scan_datetime(r["received_at"], r["survey_date"])
-        data.append((r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"], bc13(r["isbn"]), r["book_name"],
-                     r["qty"], r["worker_name"], file_date(app) if fix else scan_date, scan_time))
+    data = [(r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"], bc13(r["isbn"]), r["book_name"],
+             r["qty"], r["worker_name"], *split_scan_datetime(r["received_at"], r["survey_date"]))
+            for r in rows if norm_barcode(r["isbn"]) not in registered]
     return headers, data
 
 

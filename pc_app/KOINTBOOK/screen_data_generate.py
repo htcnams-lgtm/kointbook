@@ -110,25 +110,6 @@ class DataGenerateScreen(tk.Frame):
                        bg="white", anchor="w", fg=CL_TEXT_DIM).pack(fill=tk.X, padx=(48, 8))
         tk.Frame(fs, bg="white", height=6).pack()
 
-        # ---- [2026-10-16] 내용에 날짜가 들어가는 파일: 날짜를 조사일자로 고정할지 파일마다 고른다 ----------
-        # 서적 txt·xlsx와 문구 납품로케이션·결과확인리스트·로케이션별스캔리스트에는 날짜가 안 들어간다.
-        # 아래 4가지만 날짜가 들어가며, 체크하면 그 날짜 칸이 전부 상품마스터에서 세팅한 조사일자가 된다
-        # (체크 안 하면 실제로 스캔한 날짜). 파일 이름의 날짜는 이 선택과 상관없이 항상 조사일자.
-        fx = tk.LabelFrame(panel, text=" 내용에 날짜가 들어가는 파일 - 체크하면 날짜를 조사일자로 고정 ",
-                           bg=CL_BG, font=("", 10, "bold"))
-        fx.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        self.var_fix = {}
-        fxr = tk.Frame(fx, bg=CL_BG)
-        fxr.pack(fill=tk.X, padx=8, pady=(2, 0))
-        for i, (key, name, where, _default) in enumerate(generation.FIX_DATE_ITEMS):
-            self.var_fix[key] = tk.BooleanVar(value=generation.fix_date_on(key))
-            tk.Checkbutton(fxr, text=f"{name}  [{where}]", variable=self.var_fix[key], bg=CL_BG, anchor="w",
-                           command=lambda k=key: generation.set_fix_date(k, self.var_fix[k].get())
-                           ).grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 24))
-        self.lbl_fix_date = tk.Label(fx, text="", bg=CL_BG, fg=CL_TEXT_DIM, anchor="w", justify="left")
-        self.lbl_fix_date.pack(fill=tk.X, padx=8, pady=(0, 4))
-        fx.bind("<Configure>", lambda e: self.lbl_fix_date.config(wraplength=max(240, e.width - 24)))
-
         go = tk.Frame(self, bg=CL_BG)
         go.pack(fill=tk.X, padx=12, pady=(0, 6))
         self.btn_go = win_button(go, text="선택한 자료 생성", command=self.generate_selected, kind="accent")
@@ -186,9 +167,6 @@ class DataGenerateScreen(tk.Frame):
         self.lbl_store_code.config(text=self.app.state.store_code)
         self.lbl_store_name.config(text=self.app.state.store_name)
         self.lbl_date.config(text=self.app.state.survey_date)
-        self.lbl_fix_date.config(
-            text=f"고정할 날짜 = 상품마스터에서 세팅한 조사일자 {file_date(self.app)}  /  체크하지 않은 파일은 실제 스캔한 날짜가 들어갑니다.  "
-                 "(서적 txt·xlsx, 문구 납품로케이션·결과확인리스트·로케이션별스캔리스트에는 날짜가 없습니다)")
         self._update_go_button()
 
         # 순서(id 목록)만 백그라운드로 읽고, 표에는 보이는 줄만 DB에서 읽어 그린다.
@@ -360,7 +338,7 @@ class DataGenerateScreen(tk.Frame):
         # [2026-10-08] 합계표가 아니라 실사내역 전체(원자료)를 저장한다.
         # 이 파일을 다른 PC의 'AREA별 합산' 화면에서 불러와 합산한다.
         kind = self.bar.kind()
-        headers, rows = generation.raw_rows(self.app, kind, fix_key="areasum")
+        headers, rows = generation.raw_rows(self.app, kind)
         tag = f"_{scope.tag(kind)}" if kind in scope.KINDS else ""
         self._generate_to_folder(headers, rows, f"합산자료_AREA{tag}_{file_date(self.app)}.xlsx", "AREA 합산자료(실사내역)",
                                  kind if kind in scope.KINDS else None)
