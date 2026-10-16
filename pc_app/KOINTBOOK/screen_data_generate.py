@@ -87,7 +87,7 @@ class DataGenerateScreen(tk.Frame):
             return f, lbl
 
         fb, self.lbl_book = card(0, "서적 자료", self.var_do_book)
-        for key, text in (("d1", "kyobo_data1.txt  (서가번호11 + 바코드13)"),
+        for key, text in (("d1", "kyobo_data1.txt  (서가번호 + 바코드13)"),
                           ("d2", "kyobo_data2.txt  (바코드13 + 수량5)"),
                           ("shelf", "서가별스캔데이터.xlsx"),
                           ("list", "결과확인리스트.xlsx  (전산재고 / 스캔재고 / 차이)")):
@@ -134,7 +134,7 @@ class DataGenerateScreen(tk.Frame):
                    "area", "section", "shelf_no", "dan", "yeol", "worker", "scan_date", "time")
         headings = ("NO", "점포코드", "바코드", "도서명", "조사수량",
                     "AREA", "SECTION", "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
-        widths = (45, 90, 120, 220, 70, 55, 60, 95, 40, 40, 90, 90, 80)
+        widths = (45, 90, 120, 220, 70, 55, 60, 150, 40, 40, 90, 90, 80)
         self.vl = VirtualList(self, columns, headings, widths, height=8, on_loaded=self._on_loaded)
         self.vl.container.pack(fill=tk.BOTH, expand=True, padx=8, pady=(6, 0))
         self.tree = self.vl.tree

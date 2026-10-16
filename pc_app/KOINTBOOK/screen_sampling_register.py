@@ -164,8 +164,10 @@ class SamplingRegisterScreen(tk.Frame):
         # 보여주지만, DB에는 예전과 똑같이 원래 이름(예: "카운터누락")만
         # 저장한다 - db.MISS_TYPES 자체(다른 화면도 같이 쓰는 목록)는
         # 손대지 않았다.
-        miss_labels = [f"{i}.{name}" for i, (name, _owner) in enumerate(dbmod.MISS_TYPES, start=1)]
-        label_to_name = dict(zip(miss_labels, [name for name, _ in dbmod.MISS_TYPES]))
+        # [2026-10-16] 맨 끝에 "미스없음"을 덧붙인다(앞 번호는 그대로). 보고서 열은 MISS_TYPES로만 만들어진다.
+        type_names = [name for name, _owner in dbmod.MISS_TYPES] + [dbmod.NO_MISS_TYPE]
+        miss_labels = [f"{i}.{name}" for i, name in enumerate(type_names, start=1)]
+        label_to_name = dict(zip(miss_labels, type_names))
         name_to_label = {name: lbl for lbl, name in label_to_name.items()}
 
         try:
@@ -182,22 +184,36 @@ class SamplingRegisterScreen(tk.Frame):
                        activebackground=CL_PANEL, selectcolor=CL_PANEL, font=("", 10)).grid(
             row=8, column=0, columnspan=2, sticky="w", pady=(0, 16))
 
+        def sync_no_miss(_e=None):
+            """미스없음을 고르면 미스수량/건수를 0으로 고정(수정 불가), 다른 유형을 고르면 다시 입력할 수 있게."""
+            no_miss = label_to_name.get(type_var.get()) == dbmod.NO_MISS_TYPE
+            for e in (e_qty, e_cnt):
+                e.config(state="normal")
+                if no_miss:
+                    e.delete(0, tk.END)
+                    e.insert(0, "0")
+                    e.config(state="readonly")
+
+        cb_type.bind("<<ComboboxSelected>>", sync_no_miss)
+
         if row is not None:
             e_area.insert(0, row["area"] or "")
             e_section.insert(0, row["section"] or "")
             e_qty.insert(0, row["miss_qty"] or 0)
             e_cnt.insert(0, row["miss_count"] or 0)
             type_var.set(name_to_label.get(row["miss_type"], miss_labels[0]))
+            sync_no_miss()
 
         tk.Frame(card, bg=CL_GRID, height=1).grid(
             row=9, column=0, columnspan=2, sticky="ew", pady=(0, 16))
 
         def clear_fields():
+            type_var.set(miss_labels[0])
+            sync_no_miss()   # 미스없음이었다면 잠긴 수량/건수 칸을 다시 풀어 둔다
             e_area.delete(0, tk.END)
             e_section.delete(0, tk.END)
             e_qty.delete(0, tk.END)
             e_cnt.delete(0, tk.END)
-            type_var.set(miss_labels[0])
 
         def read_fields():
             area = e_area.get().strip()
@@ -212,6 +228,8 @@ class SamplingRegisterScreen(tk.Frame):
                 messagebox.showwarning("알림", "AREA와 SECTION을 입력하세요.", parent=win)
                 return None
             miss_type = label_to_name.get(type_var.get(), type_var.get())
+            if miss_type == dbmod.NO_MISS_TYPE:
+                qty = cnt = 0
             return area, section, qty, cnt, miss_type
 
         def do_register():

@@ -33,16 +33,16 @@ class LocationInputActivity : BaseActivity() {
     companion object {
         private const val SCAN_ACTION = "nlscan.action.SCANNER_RESULT"
         private val FIELD_NAMES = arrayOf("AREA", "SECTION", "서가번호")
-        // [2026-09-23 재정정] AREA 2자리 / SECTION 3자리 / 서가번호 11자리
-        // 자릿수 제한(서가번호는 PC/PDA 모두 11자리). activity_location_input.xml의
+        // [2026-09-23 재정정] AREA 2자리 / SECTION 3자리 / 서가번호 11자리 -> [2026-10-16] 서가번호 20자리 이하
+        // 자릿수 제한(서가번호는 PC/PDA 모두 20자리 이하). activity_location_input.xml의
         // android:maxLength도 같은 값으로 맞춰서 키보드 입력을 막고, 여기서는
         // 물리 스캔값처럼 maxLength를 안 타는 경로까지 한 번 더 잘라서 확실히
         // 지킨다.
-        private val MAX_LENGTHS = intArrayOf(2, 3, 11)
+        private val MAX_LENGTHS = intArrayOf(2, 3, 20)
         // [2026-09-23 재재정정] AREA는 정확히 2자리, SECTION은 정확히 3자리가
         // 아니면 다음 칸으로 못 넘어가게 막는다(1자리나 3자리처럼 자릿수가
         // 안 맞으면 확정 자체가 안 됨). 서가번호는 정해진 자릿수가 없어 위
-        // MAX_LENGTHS(11자리)만 지키면 되므로 -1(자릿수 검사 없음)로 둔다.
+        // MAX_LENGTHS(20자리)만 지키면 되므로 -1(자릿수 검사 없음)로 둔다.
         private val EXACT_LENGTHS = intArrayOf(2, 3, -1)
 
         // 경고 팝업 문구용 조사 ("AREA가 / SECTION이", "AREA를 / SECTION을")

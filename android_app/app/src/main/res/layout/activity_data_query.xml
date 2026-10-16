@@ -80,7 +80,7 @@
             android:layout_marginEnd="8dp"
             android:background="@drawable/edit_classic"
             android:padding="6dp"
-            android:maxLength="11"
+            android:maxLength="20"
             android:maxLines="1"
             android:imeOptions="actionDone"
             android:textSize="15sp"
