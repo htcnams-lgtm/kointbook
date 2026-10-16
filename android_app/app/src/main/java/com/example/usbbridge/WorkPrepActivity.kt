@@ -64,7 +64,7 @@ class WorkPrepActivity : BaseActivity() {
 
         findViewById<TextView>(R.id.tvTitleBarText).text = "KOINTBOOK [작업준비]"
 
-        findViewById<TextView>(R.id.tvStore).text = "${AppState.storeCode} / ${AppState.storeName}"
+        findViewById<TextView>(R.id.tvStore).text = AppState.storeLabel()
 
         etWorkerCode = findViewById(R.id.etWorkerCode)
         tvWorkerName = findViewById(R.id.tvWorkerName)
@@ -186,7 +186,7 @@ class WorkPrepActivity : BaseActivity() {
                         AppState.storeName = name
                     }
                 }
-                findViewById<TextView>(R.id.tvStore).text = "${AppState.storeCode} / ${AppState.storeName}"
+                findViewById<TextView>(R.id.tvStore).text = AppState.storeLabel()
 
                 val parts = mutableListOf<String>()
                 if (storeCount > 0) parts.add("점포 ${fmtCount(storeCount)}건")
@@ -221,9 +221,9 @@ class WorkPrepActivity : BaseActivity() {
             focusPositive = false, // 되돌릴 수 없는 동작이라 기본 포커스는 안전하게 '취소'
             onPositive = {
                 db.resetMasterData()
-                AppState.storeCode = "KYOBO01"
-                AppState.storeName = "교보문고 광화문점"
-                findViewById<TextView>(R.id.tvStore).text = "${AppState.storeCode} / ${AppState.storeName}"
+                AppState.storeCode = ""
+                AppState.storeName = ""
+                findViewById<TextView>(R.id.tvStore).text = AppState.storeLabel()
                 updateItemCountLabel()
                 tvMasterReceiveStatus.text = "마스터가 초기화되었습니다. PC에서 다시 전송해주세요."
                 Toast.makeText(this, "마스터 데이터를 초기화했습니다.", Toast.LENGTH_SHORT).show()

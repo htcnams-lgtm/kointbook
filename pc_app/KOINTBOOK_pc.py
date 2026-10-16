@@ -110,12 +110,14 @@ class AppState:
     자체가 엉뚱했던 것). 이제 마지막으로 쓰던 점포/조사일자를 DB 안
     app_settings에 저장해두고, 켤 때 그 값부터 읽어온다(DB 파일 안에
     있으니 백업/복원해도 같이 백업/복원된다) - 저장된 값이 없으면(처음
-    설치했을 때) 예전처럼 KYOBO01/오늘 날짜로 시작한다."""
+    설치했을 때) 점포코드·점포명은 빈칸, 조사일자는 오늘 날짜로 시작한다."""
     def __init__(self):
         from KOINTBOOK import db as dbmod
         from KOINTBOOK.ui_common import today_str
-        self.store_code = dbmod.get_setting("last_store_code", "KYOBO01")
-        self.store_name = dbmod.get_setting("last_store_name", "교보문고 광화문점")
+        # [2026-10-16] "프로그램 점포코드, 점포명 기초값 광화문이 아니라 아무것도 없게 해줘" - 저장된 값이 없으면 빈칸으로 시작한다
+        # (점포를 고르기 전까지는 점포코드·점포명이 비어 있다. 예전 KYOBO01 / 교보문고 광화문점 기본값은 없앴다).
+        self.store_code = dbmod.get_setting("last_store_code", "") or ""
+        self.store_name = dbmod.get_setting("last_store_name", "") or ""
         self.survey_date = dbmod.get_setting("last_survey_date", today_str())
 
     def save(self):

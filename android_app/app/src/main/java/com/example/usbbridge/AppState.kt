@@ -31,8 +31,13 @@ object AppState {
 
     val isStationery: Boolean get() = kindOfArea(currentArea) == KIND_STATIONERY
 
-    var storeCode: String = "KYOBO01"
-    var storeName: String = "교보문고 광화문점"
+    // [2026-10-16] "프로그램 점포코드, 점포명 기초값 광화문이 아니라 아무것도 없게" - 마스터를 받기 전에는 빈칸
+    var storeCode: String = ""
+    var storeName: String = ""
+
+    /** 화면 위쪽 "점포코드 / 점포명" 표시. 둘 다 비어 있으면(마스터 받기 전) "-". */
+    fun storeLabel(): String =
+        if (storeCode.isBlank() && storeName.isBlank()) "-" else "$storeCode / $storeName"
     var workerCode: String = ""
     var workerName: String = ""
     var ip: String = "10.10.10.10"

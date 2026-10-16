@@ -18,12 +18,12 @@ kyobo_data2.txt + 인천_결과확인리스트(20251017).xlsx + 인천_서가별
    결과확인리스트.xlsx / 서가별스캔데이터.xlsx (서적 행만)
   ── 문구 ── (UTF-8 텍스트, CRLF, 헤더 없음)
    납품로케이션데이터 : `위치,바코드,수량` - 위치 = AREA+SECTION(예 101), (위치,바코드)별 수량 합계
-   납품상세데이터    : `조사일자,납품처(514),바코드,수량,구분코드(402),단가+종류코드(502)+위치,
-                        페이지,줄번호,상품명` - 스캔 1건당 1줄. 구분코드/단가/종류코드는 문구
-                        상품마스터(cmdt_dvsn_code/sale_unpr/cmdt_code_kind_code) 값.
-                        페이지 = 한 위치 안에서 (서가번호,단,열)이 같은 스캔 묶음, 줄번호는 페이지마다 1부터.
+   납품상세데이터    : [2026-10-16 사용자 확정 11칸] `날짜,점포코드,바코드,수량,가격,구분코드,종류코드,
+                        에리어+로케이션,단,열,상품명` - 스캔 1건당 1줄. 가격/구분코드/종류코드는 문구
+                        상품마스터(sale_unpr/cmdt_dvsn_code/cmdt_code_kind_code) 값, 단(2자리)·열(3자리)은
+                        스캔한 값(예전의 페이지·줄번호는 없앰). 정렬: 로케이션 -> 단 -> 열 -> 서가번호 -> 스캔 순서.
    위치코드 = AREA 2자리 + SECTION 3자리 = 5자리 (예 01+001 -> 01001)
-   납품처(514 등) = 문구 상품마스터 파일의 rdp_code 값 그대로
+   점포코드(591 등) = 문구 상품마스터 파일의 rdp_code 값 그대로(비어 있으면 선택된 점포코드)
  ── 공통 ── 자료생성으로 나가는 모든 바코드는 13자리(앞 0 채움)로 통일 (마스터 파일 0000000000001, 스캔 1)
 
   (옛 설명) 자료①,②생성      : ① kyobo_data1.txt - 바코드별 전체 스캔수량 집계, 위치
@@ -436,7 +436,7 @@ def _loc_sort_key(loc):
 
 
 STAT_LOC_HEADERS = ("위치", "바코드", "수량")
-STAT_DET_HEADERS = ("조사일자", "납품처", "바코드", "수량", "구분코드", "단가+종류코드+위치", "페이지", "줄번호", "상품명")
+STAT_DET_HEADERS = ("날짜", "점포코드", "바코드", "수량", "가격", "구분코드", "종류코드", "에리어+로케이션", "단", "열", "상품명")
 
 
 def stat_location_rows(app, stat_rows=None):
@@ -462,46 +462,57 @@ def _clean_text(s):
     return str(s or "").replace(",", " ").replace("\r", " ").replace("\n", " ").strip()
 
 
+def _pad_num(v, width):
+    """단·열처럼 숫자면 앞 0을 채워 width자리로(예: 1 -> 01, 1 -> 001), 숫자가 아니면 입력된 그대로."""
+    v = _raw_field(v)
+    return v.zfill(width) if v.isdigit() else v
+
+
+def _price_int(v):
+    try:
+        return int(round(float(v)))
+    except (TypeError, ValueError):
+        return 0
+
+
 def stat_detail_rows(app, stat_rows=None, stat=None):
-    """납품상세데이터: 스캔 1건당 1행.
-    (조사일자, 납품처, 바코드, 수량, 구분코드, 단가+종류코드+위치, 페이지, 줄번호, 상품명)
-    조사일자 칸은 항상 상품마스터에서 세팅한 조사일자(스캔한 날짜가 아님). 수량·페이지·줄번호는 정수, 나머지는 글자."""
+    """납품상세데이터: 스캔 1건당 1행, 11칸.
+    (날짜, 점포코드, 바코드, 수량, 가격, 구분코드, 종류코드, 에리어+로케이션, 단, 열, 상품명)
+    [2026-10-16 사용자 확정] 가격 = 상품마스터 가격, 구분코드 = 상품마스터 cmdt_dvsn_code, 종류코드 = 상품마스터
+    cmdt_code_kind_code, 에리어+로케이션 = AREA 2자리 + SECTION 3자리, 단(2자리)·열(3자리)은 스캔한 값 그대로
+    (예전의 "페이지·줄번호"는 없앴다). 날짜 칸은 항상 상품마스터에서 세팅한 조사일자(스캔한 날짜가 아님).
+    점포코드 = 상품마스터 파일의 rdp_code, 비어 있으면 화면에 선택된 점포코드. 수량·가격은 정수, 나머지는 글자.
+    정렬 = 로케이션 -> 단 -> 열 -> 서가번호 -> 스캔 순서."""
     if stat_rows is None or stat is None:
         _b, stat_rows, stat = split_counts(app)
     date = file_date(app)
-    ledger_names = _stat_ledger_map(app.state.store_code)  # [2026-10-16] 상품명은 문구 장부마스터 우선(단가·코드는 상품마스터만 줌)
-    by_loc = {}
-    for r in nonzero_rows(stat_rows):  # 수량 0 줄은 빼고 페이지·줄번호를 매긴다(번호가 비지 않게)
+    ledger_names = _stat_ledger_map(app.state.store_code)  # [2026-10-16] 상품명은 문구 장부마스터 우선(가격·코드는 상품마스터만 줌)
+    def n(v):
+        v = str(v or "").strip()
+        return (0, int(v)) if v.isdigit() else (1, 0)
+    keyed = []
+    for r in nonzero_rows(stat_rows):  # 수량 0 줄은 뺀다
         isbn = str(r["isbn"] or "").strip()
         if not isbn:
             continue
         loc = stat_location(r["area"], r["section"])
-        by_loc.setdefault(loc, []).append(r)
+        dan, yeol, shelf = _raw_field(r["dan"]), _raw_field(r["yeol"]), _raw_field(r["shelf_no"])
+        keyed.append(((_loc_sort_key(loc), n(dan), dan, n(yeol), yeol, n(shelf), shelf, r["id"]), loc, r, isbn, dan, yeol))
+    keyed.sort(key=lambda x: x[0])
     rows = []
-    for loc in sorted(by_loc, key=_loc_sort_key):
-        pages = {}
-        for r in by_loc[loc]:
-            pages.setdefault((_raw_field(r["shelf_no"]), _raw_field(r["dan"]), _raw_field(r["yeol"])), []).append(r)
-        def _page_key(k):
-            # k = (서가번호, 단, 열) -> 정렬은 단, 열, 서가번호 순(숫자 기준, 글자는 뒤)
-            def n(v):
-                v = str(v or "").strip()
-                return (0, int(v)) if v.isdigit() else (1, 0)
-            return (n(k[1]), k[1], n(k[2]), k[2], n(k[0]), k[0])
-        for pno, key in enumerate(sorted(pages, key=_page_key), start=1):
-            for seq, r in enumerate(sorted(pages[key], key=lambda x: x["id"]), start=1):
-                isbn = str(r["isbn"]).strip()
-                name, price, dvsn, kcode, rdp = stat.get(norm_barcode(isbn), ("", 0, "", "", ""))
-                lg = ledger_names.get(bc13(isbn))
-                if lg is not None and lg["book_name"]:
-                    name = lg["book_name"]
-                rows.append((date, rdp, bc13(isbn), r["qty"] or 0, dvsn, f"{price}{kcode}{loc}", pno, seq, name))
+    for _k, loc, r, isbn, dan, yeol in keyed:
+        name, price, dvsn, kcode, rdp = stat.get(norm_barcode(isbn), ("", 0, "", "", ""))
+        lg = ledger_names.get(bc13(isbn))
+        if lg is not None and lg["book_name"]:
+            name = lg["book_name"]
+        rows.append((date, rdp or str(app.state.store_code or "").strip(), bc13(isbn), r["qty"] or 0, _price_int(price),
+                     dvsn, kcode, loc, _pad_num(dan, 2), _pad_num(yeol, 3), name))
     return rows
 
 
 def stat_detail_lines(app, stat_rows=None, stat=None):
     """납품상세데이터 txt: 위 행을 쉼표로 이은 한 줄씩(상품명 안의 쉼표·줄바꿈은 공백으로)."""
-    return [",".join([str(v) for v in r[:8]] + [_clean_text(r[8])]) for r in stat_detail_rows(app, stat_rows, stat)]
+    return [",".join([str(v) for v in r[:10]] + [_clean_text(r[10])]) for r in stat_detail_rows(app, stat_rows, stat)]
 
 
 def write_text_lines(lines, path):
@@ -755,7 +766,7 @@ def generate_stat_files(app, out_dir, only=None, include_zero=True):
         out.append((stat_location_filename(app, "xlsx"), len(rows)))
     if "det_x" in only:
         rows = stat_detail_rows(app, stat_rows, stat)
-        write_stat_xlsx(out_dir / stat_detail_filename(app, "xlsx"), STAT_DET_HEADERS, rows, qty_cols=(3,))
+        write_stat_xlsx(out_dir / stat_detail_filename(app, "xlsx"), STAT_DET_HEADERS, rows, qty_cols=(3, 4))
         out.append((stat_detail_filename(app, "xlsx"), len(rows)))
     if "stat_list" in only:
         headers, rows = stat_item_list_rows(app, include_zero=include_zero, stat_rows=stat_rows)

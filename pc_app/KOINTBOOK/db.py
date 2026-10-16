@@ -364,13 +364,10 @@ def init_db():
                 "(store_code, survey_date, isbn)")
     conn.commit()
 
-    # 데모용 샘플 점포/작업자 (없을 때만 삽입)
-    cur.execute("SELECT COUNT(*) FROM stores")
-    if cur.fetchone()[0] == 0:
-        cur.executemany(
-            "INSERT INTO stores(store_code, store_name) VALUES (?,?)",
-            [("KYOBO01", "교보문고 광화문점")]
-        )
+    # [2026-10-16] "프로그램 점포코드, 점포명 기초값 광화문이 아니라 아무것도 없게 해줘" - 데모용 점포(KYOBO01 / 교보문고 광화문점)는
+    # 더 이상 넣지 않는다. 예전 버전이 넣어둔 데모 점포는 그 점포로 받은 자료가 하나도 없을 때만 지운다.
+    _remove_untouched_demo_store(cur)
+    # 데모용 샘플 작업자 (없을 때만 삽입)
     cur.execute("SELECT COUNT(*) FROM workers")
     if cur.fetchone()[0] == 0:
         cur.executemany(
@@ -379,6 +376,27 @@ def init_db():
         )
     conn.commit()
     conn.close()
+
+
+_DEMO_STORE = ("KYOBO01", "교보문고 광화문점")
+_STORE_DATA_TABLES = ("books", "ledger_master", "exceptions", "stock_counts", "dup_ack",
+                      "section_printed", "planned_sections", "area_sum", "sampling_miss")
+
+
+def _remove_untouched_demo_store(cur):
+    """예전 버전이 처음 실행할 때 넣어둔 데모 점포(KYOBO01 / 교보문고 광화문점)를 지운다 - 이름을 바꿨거나 그 점포로
+    받은 자료(마스터·실사·합산 등)가 하나라도 있으면 그대로 둔다. 마지막으로 쓰던 점포가 그 데모 점포였으면 그 기억도 비운다."""
+    try:
+        if not cur.execute("SELECT 1 FROM stores WHERE store_code=? AND store_name=?", _DEMO_STORE).fetchone():
+            return
+        for t in _STORE_DATA_TABLES:
+            if cur.execute(f"SELECT 1 FROM {t} WHERE store_code=? LIMIT 1", (_DEMO_STORE[0],)).fetchone():
+                return
+        cur.execute("DELETE FROM stores WHERE store_code=?", (_DEMO_STORE[0],))
+        cur.execute("DELETE FROM app_settings WHERE (key='last_store_code' AND value=?) OR (key='last_store_name' AND value=?)",
+                    _DEMO_STORE)
+    except sqlite3.Error:
+        pass  # 표 이름이 달라 확인이 안 되면 건드리지 않는다
 
 
 def get_setting(key, default=None):

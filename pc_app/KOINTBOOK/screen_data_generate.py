@@ -99,7 +99,7 @@ class DataGenerateScreen(tk.Frame):
 
         fs, self.lbl_stat = card(1, "문구 자료", self.var_do_stat)
         for key, text in (("loc", "납품로케이션데이터.txt  (위치,바코드,수량)"),
-                          ("det", "납품상세데이터.txt  (날짜,납품처,바코드,수량,구분,단가+종류+위치,페이지,줄,상품명)"),
+                          ("det", "납품상세데이터.txt  (날짜,점포코드,바코드,수량,가격,구분,종류,에리어+로케이션,단,열,상품명)"),
                           ("loc_x", "납품로케이션데이터.xlsx  (txt와 같은 내용)"),
                           ("det_x", "납품상세데이터.xlsx  (txt와 같은 내용)"),
                           ("stat_list", "결과확인리스트.xlsx  (문구 장부재고 / X·X·X / 스캔재고 / 차이)"),

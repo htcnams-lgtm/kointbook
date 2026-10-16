@@ -20,7 +20,7 @@ class MenuActivity : BaseActivity() {
 
         findViewById<TextView>(R.id.tvTitleBarText).text = "KOINTBOOK [메뉴]"
         // [2026-10-02] "점포코드 / 점포명 / 작업자" 형식, 글씨 1사이즈 크게(15sp -> 16sp, activity_menu.xml)
-        findViewById<TextView>(R.id.tvHeader).text = "${AppState.storeCode} / ${AppState.storeName} / ${AppState.workerName}"
+        findViewById<TextView>(R.id.tvHeader).text = "${AppState.storeLabel()} / ${AppState.workerName}"
 
         btnDataInput = findViewById<android.widget.Button>(R.id.btnDataInput).also {
             it.setOnClickListener { goDataInput() }
