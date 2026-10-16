@@ -73,7 +73,7 @@ class DataGenerateScreen(tk.Frame):
 
         self.var_do_book = tk.BooleanVar(value=True)
         self.var_do_stat = tk.BooleanVar(value=True)
-        self.var_f = {k: tk.BooleanVar(value=True) for k in ("d1", "d2", "list", "shelf", *generation.STAT_FILE_KEYS)}
+        self.var_f = {k: tk.BooleanVar(value=True) for k in ("d1", "d2", "list", "shelf", "shelf_sum", *generation.STAT_FILE_KEYS)}
 
         def card(col, title, var_do):
             f = tk.Frame(panel, bg="white", highlightbackground="#C4C8D0", highlightthickness=1)
@@ -87,9 +87,10 @@ class DataGenerateScreen(tk.Frame):
             return f, lbl
 
         fb, self.lbl_book = card(0, "서적 자료", self.var_do_book)
-        for key, text in (("d1", "kyobo_data1.txt  (서가번호 + 바코드13)"),
+        for key, text in (("d1", "kyobo_data1.txt  (서가번호11 + 바코드13)"),
                           ("d2", "kyobo_data2.txt  (바코드13 + 수량5)"),
                           ("shelf", "서가별스캔데이터.xlsx"),
+                          ("shelf_sum", "서가별스캔데이터(서가별 합산).xlsx  (같은 바코드·같은 서가번호 합산)"),
                           ("list", "결과확인리스트.xlsx  (전산재고 / 스캔재고 / 차이)")):
             tk.Checkbutton(fb, text=text, variable=self.var_f[key], bg="white", anchor="w").pack(fill=tk.X, padx=(28, 8))
         self.var_zero = tk.BooleanVar(value=True)
@@ -132,7 +133,7 @@ class DataGenerateScreen(tk.Frame):
                    "area", "section", "shelf_no", "dan", "yeol", "worker", "scan_date", "time")
         headings = ("NO", "점포코드", "바코드", "도서명", "조사수량",
                     "AREA", "SECTION", "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
-        widths = (45, 90, 120, 220, 70, 55, 60, 150, 40, 40, 90, 90, 80)
+        widths = (45, 90, 120, 220, 70, 55, 60, 95, 40, 40, 90, 90, 80)
         self.vl = VirtualList(self, columns, headings, widths, height=8, on_loaded=self._on_loaded)
         self.vl.container.pack(fill=tk.BOTH, expand=True, padx=8, pady=(6, 0))
         self.tree = self.vl.tree
@@ -290,6 +291,10 @@ class DataGenerateScreen(tk.Frame):
                         headers, rows = generation.shelf_rows(self.app)
                         write_rows_to_excel_file(rows, headers, book_dir / generation.shelf_filename(self.app, "서적"))
                         done.append(("서적전용/" + generation.shelf_filename(self.app, "서적"), len(rows)))
+                    if self.var_f["shelf_sum"].get():
+                        headers, rows = generation.shelf_sum_rows(self.app)
+                        write_rows_to_excel_file(rows, headers, book_dir / generation.shelf_sum_filename(self.app, "서적"))
+                        done.append(("서적전용/" + generation.shelf_sum_filename(self.app, "서적"), len(rows)))
             if self.var_do_stat.get():
                 if not stat_rows:
                     skipped.append("문구: 문구 실사 자료가 없습니다")

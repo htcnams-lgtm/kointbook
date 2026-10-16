@@ -11,10 +11,10 @@ kyobo_data2.txt + 인천_결과확인리스트(20251017).xlsx + 인천_서가별
 [2026-10-13 개정] 서적/문구 분리 + 샘플 양식 재확인 (아래 옛 설명보다 이 블록이 우선)
   스캔 행이 문구 상품마스터(books.kind='문구')에 있으면 문구, 아니면 서적(미등록 포함)으로 본다.
   ── 서적 ──
-   kyobo_data1.txt : 서가번호(11, [2026-10-16] 입력이 11자리를 넘으면 최대 20자리 그대로)+바코드(13)=24자~, (서가번호,바코드) 조합당 1줄(중복 제거), 정렬, CRLF
+   kyobo_data1.txt : 서가번호(11)+바코드(13)=24자, (서가번호,바코드) 조합당 1줄(중복 제거), 정렬, CRLF
    kyobo_data2.txt : 바코드(13)+수량(5, 0채움)=18자, 바코드별 합계 1줄, 바코드순, CRLF
                      (이전 버전은 두 파일의 정의가 서로 바뀌어 있었다 - 받은 샘플 기준으로 바로잡음)
-   서가번호(11) = 점포3+AREA2+SECTION3+3자리: PDA에 입력한 서가번호(11~20자리)를 그대로 쓴다
+   서가번호(11) = 점포3+AREA2+SECTION3+3자리: PDA에 입력한 서가번호(11자리)를 그대로 쓴다
    결과확인리스트.xlsx / 서가별스캔데이터.xlsx (서적 행만)
   ── 문구 ── (UTF-8 텍스트, CRLF, 헤더 없음)
    납품로케이션데이터 : `위치,바코드,수량` - 위치 = AREA+SECTION(예 101), (위치,바코드)별 수량 합계
@@ -372,17 +372,16 @@ def summary(app):
     return {"서적": calc(book_rows), "문구": calc(stat_rows), "문구마스터": len(stat)}
 
 
-SHELF_NO_MAX_LEN = 20   # PDA/PC 서가번호 최대 자릿수 ([2026-10-16] 예전 11자리 -> 20자리 이하)
-
-
 def shelf_code(r, store_code):
-    """서가번호. PDA/PC에서 입력한 서가번호가 숫자 11자리 이상(최대 20자리)이면 입력한 그대로 쓴다
-    ([2026-10-16] 예전에는 12자리 이상이면 뒤 11자리만 잘라 썼다).
-    그보다 짧은 값(옛 자료·짧은 값)은 점포3+AREA2+SECTION3 뒤에 입력값을 3자리로 맞춰 붙여 11자리로 만든다."""
+    """서가번호(11자리). PDA/PC에서 입력한 서가번호가 11자리 숫자면 그대로 쓴다
+    ([2026-10-16 사용자 지시] 서가번호는 다시 11자리까지 - 1.5.19의 20자리는 되돌림).
+    아니면(옛 자료·짧은 값) 점포3+AREA2+SECTION3 뒤에 입력값을 3자리로 맞춰 붙인다."""
     raw = _raw_field(r["shelf_no"])
     digits = "".join(ch for ch in raw if ch.isdigit())
-    if len(digits) >= 11:
-        return digits[-SHELF_NO_MAX_LEN:]
+    if len(digits) == 11:
+        return digits
+    if len(digits) > 11:
+        return digits[-11:]
     sec = "".join(ch for ch in _raw_field(r["section"]) if ch.isdigit())[-3:].zfill(3)
     return (_digits_only(store_code, 3) + normalize_area(r["area"], merged=True) + sec + digits[-3:].zfill(3))[:11]
 
@@ -394,7 +393,7 @@ def nonzero_rows(rows):
 
 
 def kyobo_data1_lines(app, rows=None):
-    """자료① (kyobo_data1.txt): 서가번호(11자리, 입력이 11자리를 넘으면 그 자리수 그대로 최대 20)+바코드(13), (서가번호,바코드)당 1줄, 정렬."""
+    """자료① (kyobo_data1.txt): 서가번호(11)+바코드(13)=24자, (서가번호,바코드)당 1줄, 정렬."""
     if rows is None:
         rows = split_counts(app)[0]
     store_code = app.state.store_code
@@ -610,6 +609,18 @@ def shelf_rows(app):
     return headers, data
 
 
+def shelf_sum_rows(app):
+    """서가별스캔데이터(서가별 합산): 서가별스캔데이터와 같은 컬럼·이름 기준인데, 같은 바코드 + 같은 서가번호는 한 줄로 합산한다
+    ([2026-10-16] 사용자 요청). 컬럼: 바코드,도서명,분야,출판사,서가번호,실사수량(합계). 합계가 0이면 뺀다. 정렬: 바코드 -> 서가번호."""
+    headers, data = shelf_rows(app)
+    tot, first = {}, {}
+    for r in data:
+        k = (r[0], r[4])
+        tot[k] = tot.get(k, 0) + r[5]
+        first.setdefault(k, r)
+    return headers, [first[k][:5] + (q,) for k, q in tot.items() if q != 0]
+
+
 # ---- 문구 결과확인리스트 / 로케이션별 스캔리스트 -------------------------------------------------
 # [2026-10-16] 서적 결과확인리스트·서가별스캔데이터와 같은 모양의 문구판. 기준 마스터가 서적 쪽(장부 서적 행)이
 # 아니라 문구 장부마스터(ledger_master.kind='문구')와 문구 스캔 행(AREA 20~29·80~89)이다.
@@ -774,3 +785,7 @@ def item_list_filename(app, kind="서적"):
 
 def shelf_filename(app, kind="서적"):
     return f"{short_store_label(app.state.store_name)}_{scope.tag(kind)}_서가별스캔데이터({file_date(app)}).xlsx"
+
+
+def shelf_sum_filename(app, kind="서적"):
+    return f"{short_store_label(app.state.store_name)}_{scope.tag(kind)}_서가별스캔데이터(서가별합산)({file_date(app)}).xlsx"

@@ -33,16 +33,16 @@ class LocationInputActivity : BaseActivity() {
     companion object {
         private const val SCAN_ACTION = "nlscan.action.SCANNER_RESULT"
         private val FIELD_NAMES = arrayOf("AREA", "SECTION", "서가번호")
-        // [2026-09-23 재정정] AREA 2자리 / SECTION 3자리 / 서가번호 11자리 -> [2026-10-16] 서가번호 20자리 이하
-        // 자릿수 제한(서가번호는 PC/PDA 모두 20자리 이하). activity_location_input.xml의
+        // [2026-09-23 재정정] AREA 2자리 / SECTION 3자리 / 서가번호 11자리
+        // 자릿수 제한(서가번호는 PC/PDA 모두 11자리). activity_location_input.xml의
         // android:maxLength도 같은 값으로 맞춰서 키보드 입력을 막고, 여기서는
         // 물리 스캔값처럼 maxLength를 안 타는 경로까지 한 번 더 잘라서 확실히
         // 지킨다.
-        private val MAX_LENGTHS = intArrayOf(2, 3, 20)
+        private val MAX_LENGTHS = intArrayOf(2, 3, 11)
         // [2026-09-23 재재정정] AREA는 정확히 2자리, SECTION은 정확히 3자리가
         // 아니면 다음 칸으로 못 넘어가게 막는다(1자리나 3자리처럼 자릿수가
         // 안 맞으면 확정 자체가 안 됨). 서가번호는 정해진 자릿수가 없어 위
-        // MAX_LENGTHS(20자리)만 지키면 되므로 -1(자릿수 검사 없음)로 둔다.
+        // MAX_LENGTHS(11자리)만 지키면 되므로 -1(자릿수 검사 없음)로 둔다.
         private val EXACT_LENGTHS = intArrayOf(2, 3, -1)
 
         // 경고 팝업 문구용 조사 ("AREA가 / SECTION이", "AREA를 / SECTION을")
@@ -133,8 +133,8 @@ class LocationInputActivity : BaseActivity() {
                     // [2026-10-01] AREA(2자리)/SECTION(3자리) 칸에 그보다 긴 값이 스캔되면 앞자리만
                     // 잘라 넣지 않고(예: 상품바코드 978...을 찍으면 "97"이 AREA로 들어가 버림),
                     // 상품바코드로 의심된다는 팝업 + ZZOINT 미등록 스캔과 같은 소리/진동으로 알린다.
-                    val exact = EXACT_LENGTHS[activeFieldIndex]
-                    if (exact > 0 && scanned.trim().length > exact) {
+                    // [2026-10-16] 서가번호(11자리)도 같은 방식: 11자리보다 긴 값이 스캔되면 잘라 넣지 않고 경고.
+                    if (scanned.trim().length > limit) {
                         warnSuspectBarcode(activeFieldIndex, scanned.trim(), keepValue = true)
                         return@runOnUiThread
                     }
@@ -275,6 +275,12 @@ class LocationInputActivity : BaseActivity() {
         // 사람이 손으로 한 자리 더 누른 경우(스캔이 아님)는 예전처럼 자릿수만큼 잘려 들어가기만 한다.
         val scannedBurst = detectors[index].isBurst
         detectors[index].cancel()
+        // [2026-10-16] 서가번호(11자리)도 AREA/SECTION처럼 자릿수보다 긴 값이 스캔돼 들어왔으면 경고(아래 마지막 칸 처리보다 먼저 검사).
+        if (overflowCount[index] > 0 && scannedBurst) {
+            val full = fields[index].text.toString() + overflowText[index].toString()
+            warnSuspectBarcode(index, full.trim(), keepValue = false)
+            return
+        }
         // [2026-10-06] "서가번호 물리스캔후 바로 재고입력화면으로 넘어가지않고 물리 엔터키 눌러야
         // 재고입력화면으로" - 마지막 칸(서가번호)은 스캔으로 값만 채우고 멈춘다. 스캐너가 값 뒤에
         // 자동으로 붙이는 엔터(scannedBurst)도 무시하고, 사람이 직접 누른 물리 엔터만 이동시킨다.
@@ -283,11 +289,6 @@ class LocationInputActivity : BaseActivity() {
             clearOverflow(index)
             fields[index].requestFocus()
             fields[index].selectAll()
-            return
-        }
-        if (EXACT_LENGTHS[index] > 0 && overflowCount[index] > 0 && scannedBurst) {
-            val full = fields[index].text.toString() + overflowText[index].toString()
-            warnSuspectBarcode(index, full.trim(), keepValue = false)
             return
         }
         clearOverflow(index)
@@ -314,7 +315,7 @@ class LocationInputActivity : BaseActivity() {
 
     /** 스캐너가 키보드처럼(엔터 없이) 값을 다 넣고 멈췄을 때: 엔터를 친 것과 같이 처리한다. */
     private fun onKeyboardScan(index: Int) {
-        if (EXACT_LENGTHS[index] > 0 && overflowCount[index] > 0) {
+        if (overflowCount[index] > 0) {
             val full = fields[index].text.toString() + overflowText[index].toString()
             warnSuspectBarcode(index, full.trim(), keepValue = false)
             return
@@ -323,7 +324,7 @@ class LocationInputActivity : BaseActivity() {
         confirmField(index, fromScan = true)
     }
 
-    /** [2026-10-02] AREA(2자리)/SECTION(3자리) 칸에 그보다 긴 값이 스캔됐을 때:
+    /** [2026-10-02] AREA(2자리)/SECTION(3자리) 칸에 그보다 긴 값이 스캔됐을 때([2026-10-16] 서가번호 11자리도 같음):
      * ZZOINT 미등록 상품 스캔과 같은 소리/진동 + 간단한 경고 팝업.
      * keepValue=true(물리 스캔 신호로 받은 경우): 칸에 아무것도 넣지 않았으므로 원래 값을 두고 전체 선택.
      * keepValue=false(키보드처럼 들어온 경우): 앞자리만 잘려 들어간 값이라 비우고 다시 입력받는다. */
@@ -336,7 +337,7 @@ class LocationInputActivity : BaseActivity() {
         Dialogs.info(
             activity = this,
             title = "경고",
-            message = "${NAME_SUBJECT[index]} ${EXACT_LENGTHS[index]}자리보다 긴 값이 스캔됨.\n" +
+            message = "${NAME_SUBJECT[index]} ${MAX_LENGTHS[index]}자리보다 긴 값이 스캔됨.\n" +
                 "상품바코드로 의심됨.\n" +
                 "${NAME_OBJECT[index]} 다시 입력.\n" +
                 "스캔값: $scanned"

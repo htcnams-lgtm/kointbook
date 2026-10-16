@@ -11,7 +11,7 @@
          물려받아 초록 테두리가 보이게 했다.
        - 박스 위쪽에 실제 입력값(EditText, 배경 투명)
        - 박스 아래쪽에 작은 힌트 텍스트(항상 표시, 안 사라짐)
-     힌트와 입력값이 위/아래로 나뉘어 있어 서가번호(최대 20자리)처럼 값이
+     힌트와 입력값이 위/아래로 나뉘어 있어 서가번호(최대 11자리)처럼 값이
      길어져도 서로 겹치지 않는다. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -191,7 +191,7 @@
                     android:background="@null"
                     android:minHeight="0dp"
                     android:padding="0dp"
-                    android:maxLength="20"
+                    android:maxLength="11"
                     android:imeOptions="actionDone"
                     android:nextFocusUp="@+id/etSection"
                     android:textColor="#000000"
@@ -201,7 +201,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom"
-                    android:text="스캔 또는 입력(20자리 이하)"
+                    android:text="스캔 또는 입력(11자리)"
                     android:textSize="10sp"
                     android:maxLines="1"
                     android:ellipsize="end"

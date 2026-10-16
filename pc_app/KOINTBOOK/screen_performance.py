@@ -64,10 +64,10 @@ CL_READONLY_BG = "#E4E4E4"  # 읽기전용 칸(수정 못 하고 보여주기만
 # [2026-09-28] "AREA 2자리필수, SECTION 3자리필수, 서가번호 11자리이하로
 # PDA랑 동일하게 제한해줘" - android_app의 LocationInputActivity와 같은
 # 자릿수 제한을 PC 등록 팝업에도 그대로 맞춘다. PDA 쪽 상수와 동일:
-#   MAX_LENGTHS = (2, 3, 20), EXACT_LENGTHS = (2, 3, -1)
+#   MAX_LENGTHS = (2, 3, 11), EXACT_LENGTHS = (2, 3, -1)
 AREA_MAX_LEN = 2
 SECTION_MAX_LEN = 3
-SHELF_NO_MAX_LEN = 20   # [2026-10-16] 서가번호 20자리 이하 (예전 11자리)
+SHELF_NO_MAX_LEN = 11
 
 
 def _limit_entry_length(entry, max_len):
@@ -200,7 +200,7 @@ class PerformanceScreen(tk.Frame):
         headings = ("선택", "NO", "점포코드", "바코드", "도서명", "조사수량", "AREA", "SECTION",
                     "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
         # [2026-09-23 정정] "SECTION" 헤더 글자가 안 잘리도록 폭을 늘렸다.
-        widths = (45, 45, 80, 120, 260, 70, 60, 95, 150, 45, 45, 90, 90, 80)
+        widths = (45, 45, 80, 120, 260, 70, 60, 95, 70, 45, 45, 90, 90, 80)
         self.vt = VirtualTable(
             self, columns, headings, widths,
             lambda r: self._row_values(0, r, self._view_merged)[2:], height=20,
@@ -406,7 +406,7 @@ class PerformanceScreen(tk.Frame):
                    "shelf_no", "dan", "yeol", "worker", "date", "time")
         headings = ("선택", "NO", "점포코드", "바코드", "도서명", "조사수량", "AREA", "SECTION",
                     "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
-        widths = (45, 45, 80, 120, 260, 70, 60, 95, 150, 45, 45, 90, 90, 80)
+        widths = (45, 45, 80, 120, 260, 70, 60, 95, 70, 45, 45, 90, 90, 80)
         vt = VirtualTable(popup, columns, headings, widths,
                           lambda r: self._row_values(0, r, merged)[2:], height=18,
                           style_name="BigCheck.Treeview", on_loaded=on_loaded,
@@ -859,7 +859,7 @@ class PerformanceScreen(tk.Frame):
         fields = []
         for r, (label, width, maxlen) in enumerate((("수정할 AREA (2자리)", 8, AREA_MAX_LEN),
                                                     ("수정할 SECTION (3자리)", 8, SECTION_MAX_LEN),
-                                                    ("수정할 서가번호 (20자리 이하)", 24, SHELF_NO_MAX_LEN))):
+                                                    ("수정할 서가번호 (11자리 이하)", 18, SHELF_NO_MAX_LEN))):
             tk.Label(frm, text=label, bg=CL_BG, fg=CL_TEXT_DIM).grid(row=2 + r, column=0, sticky="w", padx=(0, 14), pady=3)
             e = tk.Entry(frm, width=width, **EOPT)
             _limit_entry_length(e, maxlen)
@@ -1129,7 +1129,7 @@ class PerformanceScreen(tk.Frame):
         e_qty = tk.Entry(frm, width=20, **ENTRY_OPT)
         e_qty.grid(row=2, column=1, pady=8, ipady=4)
 
-        # [2026-09-28] AREA 2자리/SECTION 3자리/서가번호 20자리 이하로(2026-10-16 11->20) PDA와
+        # [2026-09-28] AREA 2자리/SECTION 3자리/서가번호 11자리로 PDA와
         # 동일하게 입력 글자수 자체를 제한한다(_limit_entry_length).
         tk.Label(frm, text="AREA", bg=CL_BG, fg=CL_TEXT_DIM).grid(row=3, column=0, sticky="w", pady=8)
         e_area = tk.Entry(frm, width=20, **ENTRY_OPT)
@@ -1142,7 +1142,7 @@ class PerformanceScreen(tk.Frame):
         _limit_entry_length(e_section, SECTION_MAX_LEN)
 
         tk.Label(frm, text="서가번호", bg=CL_BG, fg=CL_TEXT_DIM).grid(row=5, column=0, sticky="w", pady=8)
-        e_shelf = tk.Entry(frm, width=24, **ENTRY_OPT)
+        e_shelf = tk.Entry(frm, width=20, **ENTRY_OPT)
         e_shelf.grid(row=5, column=1, pady=8, ipady=4)
         _limit_entry_length(e_shelf, SHELF_NO_MAX_LEN)
 
@@ -1272,7 +1272,7 @@ class PerformanceScreen(tk.Frame):
                 messagebox.showinfo("알림", "바코드/수량/AREA/SECTION/서가번호를 모두 입력하세요.", parent=popup)
                 return
             # [2026-09-28] AREA 2자리필수 / SECTION 3자리필수 / 서가번호
-            # 20자리이하 - android_app의 LocationInputActivity.enterLocation()과
+            # 11자리이하 - android_app의 LocationInputActivity.enterLocation()과
             # 동일한 검사, 같은 안내문구를 쓴다(PDA/PC가 서로 다른 자릿수를
             # 허용하면 같은 위치라도 PDA에서 찍은 값과 PC에서 등록한 값이
             # 서로 어긋날 수 있어서 반드시 맞춰야 한다).
@@ -1426,7 +1426,7 @@ class PerformanceScreen(tk.Frame):
 
         def _confirm_shelf_tab(_e=None):
             # 서가번호는 AREA/SECTION과 달리 정해진 자릿수가 없어(최대
-            # 20자리는 입력 글자수 제한으로 이미 막혀 있음) 탭으로 다음
+            # 11자리는 입력 글자수 제한으로 이미 막혀 있음) 탭으로 다음
             # 칸(작업자 선택 등)으로 넘어갈 때는 "비어있지 않은지"만 확인
             # 하고, 문제 없으면 탭의 기본 동작(다음 위젯으로 포커스 이동)을
             # 그대로 둔다(area/section처럼 "break"로 가로채지 않음).
