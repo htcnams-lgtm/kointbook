@@ -122,27 +122,75 @@ def _fetch_counts(store_code, date):
     return rows
 
 
-def _fetch_books_map(store_code):
+def _kind_sql(kind):
+    """구분(kind)으로 마스터 행을 SQL에서 미리 거른다: '문구' | '서적'(문구가 아닌 것, 빈 값 포함) | None(전부)."""
+    if kind == "문구":
+        return " AND kind='문구'"
+    if kind == "서적":
+        return " AND (kind IS NULL OR kind<>'문구')"
+    return ""
+
+
+def _fetch_books_map(store_code, kind=None):
     conn = dbmod.get_conn()
     rows = conn.execute(
         "SELECT isbn, book_name, category, publisher, rcds_qty, real_qty, missing_qty, except_flag, kind, rcds_x, real_x, missing_x "
-        "FROM books WHERE store_code=?",
+        "FROM books WHERE store_code=?" + _kind_sql(kind),
         (store_code,)
     ).fetchall()
     conn.close()
     return {r["isbn"]: r for r in rows}
 
 
-def _fetch_ledger_map(store_code):
+def _fetch_ledger_map(store_code, kind=None):
     """[2026-10-08] 장부마스터(ledger_master) - 전산재고가 필요한 PC 쪽 화면/엑셀의 기준."""
     conn = dbmod.get_conn()
     rows = conn.execute(
         "SELECT isbn, book_name, category, publisher, rcds_qty, real_qty, missing_qty, except_flag, kind, rcds_x, real_x, missing_x "
-        "FROM ledger_master WHERE store_code=?",
+        "FROM ledger_master WHERE store_code=?" + _kind_sql(kind),
         (store_code,)
     ).fetchall()
     conn.close()
     return {r["isbn"]: r for r in rows}
+
+
+def _fetch_names_map(table, store_code, kind):
+    """이름·분야·출판사만 필요한 곳용 가벼운 조회(table: 'books'|'ledger_master'). 13자리 바코드 -> 행."""
+    assert table in ("books", "ledger_master")
+    conn = dbmod.get_conn()
+    rows = conn.execute(
+        f"SELECT isbn, book_name, category, publisher FROM {table} WHERE store_code=?" + _kind_sql(kind),
+        (store_code,)
+    ).fetchall()
+    conn.close()
+    return {bc13(r["isbn"]): r for r in rows}
+
+
+def _fetch_names_for(table, store_code, kind, codes):
+    """장부마스터에 없는 바코드의 이름·분야·출판사를 상품마스터에서 보충할 때, 필요한 바코드만 조회한다
+    (상품마스터 전체 48만 줄을 읽지 않으려고). codes = 13자리 바코드들. 마스터에 앞 0이 없는 모양으로 저장된
+    옛 자료도 찾도록 앞 0을 뗀 값도 같이 찾는다. 결과는 13자리 바코드 -> 행."""
+    assert table in ("books", "ledger_master")
+    want = set()
+    for c in codes:
+        want.add(c)
+        want.add(c.lstrip("0"))
+    want = sorted(want)
+    out = {}
+    if not want:
+        return out
+    conn = dbmod.get_conn()
+    try:
+        for i in range(0, len(want), 500):
+            chunk = want[i:i + 500]
+            q = ",".join("?" * len(chunk))
+            for r in conn.execute(
+                    f"SELECT isbn, book_name, category, publisher FROM {table} WHERE store_code=? AND isbn IN ({q})" + _kind_sql(kind),
+                    (store_code, *chunk)):
+                out[bc13(r["isbn"])] = r
+    finally:
+        conn.close()
+    return out
 
 
 def raw_rows(app, kind="전체"):
@@ -480,8 +528,7 @@ def item_list_rows(app, include_zero=True):
     # [2026-10-13] 바코드는 모두 13자리(bc13)로 맞춰 비교한다(마스터 0000000000001 / 스캔 1).
     # include_zero=True(기본) 이면 전산재고·실재고·스캔이 모두 0인 품목도 넣는다(화면의 체크 옵션, 받은 쪽 파일도 장부 전체 행).
     # [2026-10-16] 기본값을 False -> True로(AREA별 합산 화면에서도 전체 행).
-    ledger_map = {bc13(k): v for k, v in _fetch_ledger_map(store_code).items() if (v["kind"] or "서적") != "문구"}
-    names_map = {bc13(k): v for k, v in _fetch_books_map(store_code).items() if (v["kind"] or "서적") != "문구"}
+    ledger_map = {bc13(k): v for k, v in _fetch_ledger_map(store_code, "서적").items()}
     counts = split_counts(app)[0]
     scanned = {}
     for r in counts:
@@ -489,6 +536,8 @@ def item_list_rows(app, include_zero=True):
         if not str(r["isbn"] or "").strip():
             continue
         scanned[isbn] = scanned.get(isbn, 0) + (r["qty"] or 0)
+    # 장부마스터에 없는 스캔 바코드만 서적 상품마스터에서 이름을 보충한다(필요한 것만 조회).
+    names_map = _fetch_names_for("books", store_code, "서적", [c for c in scanned if c not in ledger_map])
 
     headers = ("바코드", "도서명", "분야", "출판사", "전산재고", "실재고", "누락재고", "예외여부",
                "스캔재고", "차이")
@@ -533,8 +582,8 @@ def shelf_rows(app):
     [2026-10-16] 도서명·분야·출판사는 서적 장부마스터 기준, 장부마스터에 없는 바코드만 서적 상품마스터로 보충한다
     (받은 쪽 서가별스캔데이터가 모두 장부마스터 값이었음). 둘 다 없으면 스캔 때 저장된 이름. 실사수량 0인 줄은 뺀다."""
     store_code = app.state.store_code
-    ledger_map = {bc13(k): v for k, v in _fetch_ledger_map(store_code).items() if (v["kind"] or "서적") != "문구"}
-    books_map = {bc13(k): v for k, v in _fetch_books_map(store_code).items() if (v["kind"] or "서적") != "문구"}
+    ledger_map = _fetch_names_map("ledger_master", store_code, "서적")
+    books_map = _fetch_names_map("books", store_code, "서적")
     rows = nonzero_rows(split_counts(app)[0])  # 서적 행만, 실사수량 0 줄 제외
     data = []
     for r in sorted(rows, key=lambda x: (bc13(x["isbn"]), shelf_code(x, store_code))):
@@ -565,12 +614,7 @@ STAT_SCAN_HEADERS = ("바코드", "상품명", "분야", "거래처", "로케이
 
 def _stat_ledger_map(store_code):
     """문구 장부마스터만: 13자리 바코드 -> 행."""
-    return {bc13(k): v for k, v in _fetch_ledger_map(store_code).items() if (v["kind"] or "서적") == "문구"}
-
-
-def _stat_names_map(store_code):
-    """문구 상품마스터만: 13자리 바코드 -> 행(이름 보충용)."""
-    return {bc13(k): v for k, v in _fetch_books_map(store_code).items() if (v["kind"] or "서적") == "문구"}
+    return {bc13(k): v for k, v in _fetch_ledger_map(store_code, "문구").items()}
 
 
 def stat_item_list_rows(app, include_zero=True, stat_rows=None):
@@ -579,7 +623,6 @@ def stat_item_list_rows(app, include_zero=True, stat_rows=None):
     include_zero=False면 장부재고와 스캔재고가 모두 0인 품목은 뺀다. 장부재고 칸이 마스터에서 X면 X로 보이고 차이 계산엔 0."""
     store_code = app.state.store_code
     ledger = _stat_ledger_map(store_code)
-    names = _stat_names_map(store_code)
     if stat_rows is None:
         stat_rows = split_counts(app)[1]
     scanned, count_names = {}, {}
@@ -590,6 +633,9 @@ def stat_item_list_rows(app, include_zero=True, stat_rows=None):
         scanned[k] = scanned.get(k, 0) + (r["qty"] or 0)
         if k not in count_names:
             count_names[k] = r["book_name"] or ""
+    # 장부마스터에 없거나 이름이 빈 바코드만 문구 상품마스터에서 이름을 보충한다(필요한 것만 조회).
+    names = _fetch_names_for("books", store_code, "문구",
+                             [c for c in (set(ledger) | set(scanned)) if c not in ledger or not ledger[c]["book_name"]])
     data = []
     for isbn in sorted(set(ledger) | set(scanned)):
         b = ledger.get(isbn)
@@ -612,7 +658,6 @@ def stat_scan_rows(app, stat_rows=None):
     로케이션 = AREA 2자리 + SECTION 3자리. 컬럼: 바코드,상품명,분야,거래처,로케이션,스캔총수량. 바코드순 → 로케이션순."""
     store_code = app.state.store_code
     ledger = _stat_ledger_map(store_code)
-    names = _stat_names_map(store_code)
     if stat_rows is None:
         stat_rows = split_counts(app)[1]
     tot, first = {}, {}
@@ -623,6 +668,9 @@ def stat_scan_rows(app, stat_rows=None):
         key = (bc13(isbn), stat_location(r["area"], r["section"]))
         tot[key] = tot.get(key, 0) + (r["qty"] or 0)
         first.setdefault(key, r)
+    # 장부마스터에 없거나 이름이 빈 바코드만 문구 상품마스터에서 이름을 보충한다(필요한 것만 조회).
+    names = _fetch_names_for("books", store_code, "문구",
+                             [k[0] for k in tot if k[0] not in ledger or not ledger[k[0]]["book_name"]])
     data = []
     for key in sorted((k for k in tot if tot[k] != 0), key=lambda k: (k[0], _loc_sort_key(k[1]))):
         k, loc = key
