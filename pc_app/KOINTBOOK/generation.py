@@ -389,7 +389,7 @@ def shelf_code(r, store_code):
 
 def nonzero_rows(rows):
     """[2026-10-16] 실사수량 0인 스캔 줄은 txt(kyobo_data1·2, 납품로케이션·상세)와 스캔리스트(서가별스캔데이터,
-    로케이션별스캔리스트)에서 뺀다. 결과확인리스트는 이 함수를 쓰지 않고 그대로 둔다(사용자 지시)."""
+    로케이션별스캔데이터)에서 뺀다. 결과확인리스트는 이 함수를 쓰지 않고 그대로 둔다(사용자 지시)."""
     return [r for r in rows if (r["qty"] or 0) != 0]
 
 
@@ -434,9 +434,6 @@ def stat_location(area, section):
 def _loc_sort_key(loc):
     return (int(loc) if loc.isdigit() else 10 ** 12, loc)
 
-
-STAT_LOC_HEADERS = ("위치", "바코드", "수량")
-STAT_DET_HEADERS = ("날짜", "점포코드", "바코드", "수량", "가격", "구분코드", "종류코드", "에리어+로케이션", "단", "열", "상품명")
 
 
 def stat_location_rows(app, stat_rows=None):
@@ -665,8 +662,8 @@ def stat_item_list_rows(app, include_zero=True, stat_rows=None):
 
 
 def stat_scan_rows(app, stat_rows=None):
-    """문구 로케이션별 스캔리스트: (바코드, 로케이션)마다 1행, 스캔총수량은 그 합계(사용자가 준 실제 파일과 같은 방식).
-    로케이션 = AREA 2자리 + SECTION 3자리. 컬럼: 바코드,상품명,분야,거래처,로케이션,스캔총수량. 바코드순 → 로케이션순."""
+    """문구 로케이션별 스캔데이터(서적의 서가별스캔데이터 자리): (바코드, 로케이션)마다 1행, 스캔총수량은 그 합계(사용자가 준 실제 파일과 같은 방식).
+    로케이션(서가번호 자리) = AREA 2자리 + SECTION 3자리(예 20101). 컬럼: 바코드,상품명,분야,거래처,로케이션,스캔총수량. 바코드순 → 로케이션순."""
     store_code = app.state.store_code
     ledger = _stat_ledger_map(store_code)
     if stat_rows is None:
@@ -731,10 +728,10 @@ def stat_detail_filename(app, ext="txt"):
 
 
 def stat_scan_filename(app):
-    return f"{short_store_label(app.state.store_name)}_{scope.tag('문구')}_로케이션별스캔리스트({file_date(app)}).xlsx"
+    return f"{short_store_label(app.state.store_name)}_{scope.tag('문구')}_로케이션별스캔데이터({file_date(app)}).xlsx"
 
 
-STAT_FILE_KEYS = ("loc", "det", "loc_x", "det_x", "stat_list", "stat_scan")
+STAT_FILE_KEYS = ("loc", "det", "stat_scan", "stat_list")  # 화면에 보이는 순서(로케이션별스캔데이터가 결과확인리스트 위)
 
 
 def write_stat_xlsx(path, headers, rows, qty_cols=()):
@@ -745,8 +742,8 @@ def write_stat_xlsx(path, headers, rows, qty_cols=()):
 
 def generate_stat_files(app, out_dir, only=None, include_zero=True):
     """문구 자료를 쓰고 (파일이름, 줄 수) 리스트를 돌려준다. only = STAT_FILE_KEYS 중 만들 것(None이면 전부):
-    loc/det = 납품로케이션·납품상세 txt, loc_x/det_x = 같은 내용의 xlsx, stat_list = 문구 결과확인리스트.xlsx,
-    stat_scan = 문구 로케이션별스캔리스트.xlsx. 문구 스캔이 없으면 빈 리스트. txt는 모두 UTF-8."""
+    loc/det = 납품로케이션·납품상세 txt, stat_scan = 문구 로케이션별스캔데이터.xlsx, stat_list = 문구 결과확인리스트.xlsx.
+    [2026-10-16] txt와 같은 내용의 xlsx(납품로케이션·납품상세)는 뺐다. 문구 스캔이 없으면 빈 리스트. txt는 모두 UTF-8."""
     only = set(STAT_FILE_KEYS if only is None else only)
     _b, stat_rows, stat = split_counts(app)
     if not stat_rows:
@@ -760,22 +757,14 @@ def generate_stat_files(app, out_dir, only=None, include_zero=True):
         lines = stat_detail_lines(app, stat_rows, stat)
         write_text_lines(lines, out_dir / stat_detail_filename(app))
         out.append((stat_detail_filename(app), len(lines)))
-    if "loc_x" in only:
-        rows = stat_location_rows(app, stat_rows)
-        write_stat_xlsx(out_dir / stat_location_filename(app, "xlsx"), STAT_LOC_HEADERS, rows, qty_cols=(2,))
-        out.append((stat_location_filename(app, "xlsx"), len(rows)))
-    if "det_x" in only:
-        rows = stat_detail_rows(app, stat_rows, stat)
-        write_stat_xlsx(out_dir / stat_detail_filename(app, "xlsx"), STAT_DET_HEADERS, rows, qty_cols=(3, 4))
-        out.append((stat_detail_filename(app, "xlsx"), len(rows)))
-    if "stat_list" in only:
-        headers, rows = stat_item_list_rows(app, include_zero=include_zero, stat_rows=stat_rows)
-        write_stat_xlsx(out_dir / item_list_filename(app, "문구"), headers, rows, qty_cols=(4, 8, 9))
-        out.append((item_list_filename(app, "문구"), len(rows)))
     if "stat_scan" in only:
         headers, rows = stat_scan_rows(app, stat_rows)
         write_stat_xlsx(out_dir / stat_scan_filename(app), headers, rows, qty_cols=(5,))
         out.append((stat_scan_filename(app), len(rows)))
+    if "stat_list" in only:
+        headers, rows = stat_item_list_rows(app, include_zero=include_zero, stat_rows=stat_rows)
+        write_stat_xlsx(out_dir / item_list_filename(app, "문구"), headers, rows, qty_cols=(4, 8, 9))
+        out.append((item_list_filename(app, "문구"), len(rows)))
     return out
 
 

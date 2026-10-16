@@ -100,10 +100,8 @@ class DataGenerateScreen(tk.Frame):
         fs, self.lbl_stat = card(1, "문구 자료", self.var_do_stat)
         for key, text in (("loc", "납품로케이션데이터.txt  (위치,바코드,수량)"),
                           ("det", "납품상세데이터.txt  (날짜,점포코드,바코드,수량,가격,구분,종류,에리어+로케이션,단,열,상품명)"),
-                          ("loc_x", "납품로케이션데이터.xlsx  (txt와 같은 내용)"),
-                          ("det_x", "납품상세데이터.xlsx  (txt와 같은 내용)"),
-                          ("stat_list", "결과확인리스트.xlsx  (문구 장부재고 / X·X·X / 스캔재고 / 차이)"),
-                          ("stat_scan", "로케이션별스캔리스트.xlsx  (바코드+로케이션별 스캔총수량)")):
+                          ("stat_scan", "로케이션별스캔데이터.xlsx  (바코드+로케이션별 스캔총수량, 로케이션 = 에리어+섹션 5자리)"),
+                          ("stat_list", "결과확인리스트.xlsx  (문구 장부재고 / X·X·X / 스캔재고 / 차이)")):
             tk.Checkbutton(fs, text=text, variable=self.var_f[key], bg="white", anchor="w").pack(fill=tk.X, padx=(28, 8))
         self.var_zero_stat = tk.BooleanVar(value=True)
         tk.Checkbutton(fs, text="결과확인리스트에 장부재고·스캔이 모두 0인 품목도 포함", variable=self.var_zero_stat,
@@ -300,7 +298,7 @@ class DataGenerateScreen(tk.Frame):
                     for name, n in generation.generate_stat_files(self.app, stat_dir, only=keys,
                                                                   include_zero=self.var_zero_stat.get()):
                         done.append(("문구전용/" + name, n))
-                    if "det" in keys or "det_x" in keys:
+                    if "det" in keys:
                         miss = generation.missing_stat_master(stat_rows, stat)
                         if miss:
                             skipped.append(f"참고: 문구 범위의 바코드 {miss:,}종이 문구 상품마스터에 없어 단가·구분코드·납품처가 비어 있습니다")
