@@ -68,7 +68,7 @@ from . import db as dbmod
 from .progress_core import Cancelled
 from .progress_dialog import run_with_progress
 from .masters import disp_qty, disp_exc
-from .ui_common import setup_treeview, print_rows_to_excel, print_excel_file, today_str, friendly_save_error, \
+from .ui_common import setup_treeview, print_rows_to_excel, print_excel_file, file_date, friendly_save_error, \
     normalize_area, digit_code_variants, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
 
 # [2026-09-28] "엑셀저장할때 오래걸려도 진행률 다이얼로그가 안뜨는데?" - 이
@@ -1077,7 +1077,7 @@ class DiffDetailScreen(tk.Frame):
         path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
             filetypes=[("Excel 파일", "*.xlsx")],
-            initialfile=f"재고조사차이내역{self._ktag()}{mode_tag}_{today_str()}.xlsx",
+            initialfile=f"재고조사차이내역{self._ktag()}{mode_tag}_{file_date(self.app)}.xlsx",
         )
         if not path:
             return
@@ -1156,7 +1156,7 @@ class DiffDetailScreen(tk.Frame):
         path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
             filetypes=[("Excel 파일", "*.xlsx")],
-            initialfile=f"재고조사차이내역_발행양식{self._ktag()}{mode_tag}_{today_str()}.xlsx",
+            initialfile=f"재고조사차이내역_발행양식{self._ktag()}{mode_tag}_{file_date(self.app)}.xlsx",
         )
         if not path:
             return
@@ -1218,7 +1218,7 @@ class DiffDetailScreen(tk.Frame):
         from datetime import datetime as _dt
         tmp_dir = os.path.join(tempfile.gettempdir(), "kointbook_print")
         os.makedirs(tmp_dir, exist_ok=True)
-        path = os.path.join(tmp_dir, f"{_dt.now().strftime('%Y%m%d_%H%M%S_%f')}_재고조사차이내역_{today_str()}.xlsx")
+        path = os.path.join(tmp_dir, f"{_dt.now().strftime('%Y%m%d_%H%M%S_%f')}_재고조사차이내역_{file_date(self.app)}.xlsx")
 
         # [2026-09-29] "발행시 이 양식으로 출력, 페이지마다 상단/헤더는
         # 고정, 페이지수는 변동값, 하단 (주)코인트써비스도 고정" - [발행]에서
@@ -1240,7 +1240,7 @@ class DiffDetailScreen(tk.Frame):
             try:
                 _write_diff_detail_workbook(path, rows, headers, report_header=report_header, summary_only=self._summary_only)
             except ImportError:
-                path = print_rows_to_excel(rows, headers, default_name=f"재고조사차이내역{self._ktag()}_{today_str()}.xlsx")
+                path = print_rows_to_excel(rows, headers, default_name=f"재고조사차이내역{self._ktag()}_{file_date(self.app)}.xlsx")
                 if not path:
                     return
             except OSError as e:
@@ -1255,7 +1255,7 @@ class DiffDetailScreen(tk.Frame):
                 _write_diff_detail_workbook(path, rows, headers, progress=progress, report_header=report_header, summary_only=self._summary_only)
                 return path
             except ImportError:
-                return print_rows_to_excel(rows, headers, default_name=f"재고조사차이내역{self._ktag()}_{today_str()}.xlsx")
+                return print_rows_to_excel(rows, headers, default_name=f"재고조사차이내역{self._ktag()}_{file_date(self.app)}.xlsx")
 
         def on_done(result, error):
             if isinstance(error, Cancelled):

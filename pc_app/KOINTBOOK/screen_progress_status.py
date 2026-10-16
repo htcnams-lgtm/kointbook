@@ -222,7 +222,7 @@ class ProgressStatusScreen(tk.Frame):
         "print")로 그 파일의 기본 인쇄 동작을 호출 - Windows 전용, 그 외
         OS는 파일 저장까지만)."""
         from tkinter import messagebox
-        from .ui_common import print_rows_to_excel, print_excel_file, today_str
+        from .ui_common import print_rows_to_excel, print_excel_file, file_date
         if not getattr(self, "_rows", None):
             messagebox.showinfo("알림", "인쇄할 데이터가 없습니다.")
             return
@@ -231,7 +231,7 @@ class ProgressStatusScreen(tk.Frame):
         # (code, status, area, section) 4개짜리로 바뀌었는데, 여기 헤더는
         # 여전히 2개(A_SECTION/상태)라 앞 2개만 잘라서 내보낸다.
         export_data = [row[:2] for row in self._rows]
-        path = print_rows_to_excel(export_data, headers, default_name=f"재고조사진행현황_{today_str()}.xlsx")
+        path = print_rows_to_excel(export_data, headers, default_name=f"재고조사진행현황_{file_date(self.app)}.xlsx")
         if not path:
             return
         print_excel_file(path)
@@ -243,7 +243,7 @@ class ProgressStatusScreen(tk.Frame):
         도서명/재고수량)으로 바로 인쇄한다 - 표만 다른 화면이라 별도 필터
         화면을 거치지 않고 타일 더블클릭 한 번으로 바로 인쇄까지 끝낸다."""
         from tkinter import messagebox
-        from .ui_common import print_rows_to_excel, print_excel_file, today_str, normalize_area, digit_code_variants
+        from .ui_common import print_rows_to_excel, print_excel_file, file_date, normalize_area, digit_code_variants
 
         store_code = self.app.state.store_code
         date = self.app.state.survey_date
@@ -277,7 +277,7 @@ class ProgressStatusScreen(tk.Frame):
             data.append((location, r["isbn"], r["book_name"], r["qty"]))
 
         headers = ("LOCATION", "바코드", "도서명", "재고수량")
-        default_name = f"섹션별아이템재고현황_{_code(area, section)}_{today_str()}.xlsx"
+        default_name = f"섹션별아이템재고현황_{_code(area, section)}_{file_date(self.app)}.xlsx"
         path = print_rows_to_excel(data, headers, default_name=default_name)
         if not path:
             return

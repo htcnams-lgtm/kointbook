@@ -63,14 +63,49 @@ kyobo_data2.txt + 인천_결과확인리스트(20251017).xlsx + 인천_서가별
 import re
 from pathlib import Path
 from . import db as dbmod
-from .ui_common import today_str, normalize_area, short_store_label, write_text_lines_file, eof_crlf_enabled, split_scan_datetime
+from .ui_common import file_date, normalize_area, short_store_label, write_text_lines_file, eof_crlf_enabled, split_scan_datetime
 from .masters import norm_barcode, bc13, disp_qty, disp_exc
 from . import scope
 
 
+# ---- 내용에 날짜가 들어가는 파일: "날짜 고정" 선택 -----------------------------------------
+# [2026-10-16] 자료생성으로 나가는 파일 중 안에 날짜가 적히는 것은 아래 4가지다(서적 txt·xlsx 4종과 문구
+# 납품로케이션·결과확인리스트·로케이션별 스캔리스트에는 날짜가 없다). 항목마다 사용자가 자료생성 화면에서
+# "상품마스터에서 세팅한 조사일자로 고정"을 켜고 끌 수 있고, 켜면 그 파일 안의 날짜 칸이 전부 조사일자가 된다.
+# 끄면 실제로 스캔한 날짜(실사일자)가 그대로 나간다(납품상세데이터는 끄면 줄마다 스캔한 날짜).
+# 시간(실사시간)은 건드리지 않는다. 설정은 DB(app_settings)에 저장돼 다음에 켜도 유지된다.
+FIX_DATE_ITEMS = (
+    # (키, 화면에 보일 이름, 날짜가 들어가는 자리, 기본값)
+    ("det", "문구 납품상세데이터 (txt·xlsx)", "1열 조사일자", True),
+    ("unreg", "미등록상품 자료.xlsx", "실사일자 열", False),
+    ("areasum", "합산자료(AREA).xlsx", "실사일자 열", False),
+    ("raw", "실사자료 엑셀저장·출력", "실사일자 열", False),
+)
+_FIX_DEFAULT = {k: d for k, _n, _w, d in FIX_DATE_ITEMS}
+
+
+def fix_date_on(key):
+    """이 파일의 내용 날짜를 조사일자로 고정하는 중이면 True."""
+    v = dbmod.get_setting("gen_fixdate_" + key, None)
+    if v is None or v == "":
+        return _FIX_DEFAULT.get(key, False)
+    return str(v) == "1"
+
+
+def set_fix_date(key, on):
+    dbmod.set_setting("gen_fixdate_" + key, "1" if on else "0")
+
+
+def _content_date(app, received_at, row_survey_date, fix):
+    """파일 안에 적을 날짜(YYYYMMDD): 고정이면 조사일자, 아니면 스캔한 날짜."""
+    if fix:
+        return file_date(app)
+    return split_scan_datetime(received_at, row_survey_date)[0]
+
+
 def output_dir(app, kind=None):
     """생성 폴더. kind가 '서적'/'문구'면 그 아래 '서적전용'/'문구전용' 하위 폴더."""
-    date = app.state.survey_date or today_str()
+    date = file_date(app)
     store_name = app.state.store_name or "매장"
     safe_name = re.sub(r'[\\/:*?"<>|]', "", store_name).strip() or "매장"
     out_dir = Path("C:/KOINTBOOK") / f"{date}_{safe_name}"
@@ -145,10 +180,11 @@ def _fetch_ledger_map(store_code):
     return {r["isbn"]: r for r in rows}
 
 
-def raw_rows(app, kind="전체"):
+def raw_rows(app, kind="전체", fix_key="raw"):
     """실사원자료: stock_counts를 그대로 (엑셀저장/재집계 그리드용 - 자료①,
     ②생성 버튼과는 별개다. 그 버튼은 아래 kyobo_data*_lines()를 쓴다).
-    kind가 '서적'/'문구'면 그 구분 행만 (구분 기준은 split_counts 참고)."""
+    kind가 '서적'/'문구'면 그 구분 행만 (구분 기준은 split_counts 참고).
+    fix_key: 날짜 고정 선택 항목 키('raw' 실사자료 / 'areasum' 합산자료) - 켜져 있으면 실사일자 칸을 조사일자로."""
     if kind in scope.KINDS:
         b, s, _m = split_counts(app)
         rows = s if kind == "문구" else b
@@ -157,10 +193,13 @@ def raw_rows(app, kind="전체"):
     # [2026-10-15] 조사일자 열은 뺐다(조회 기준일 뿐). 스캔한 일시는 실사일자/실사시간 두 열로 나눠 보여준다.
     headers = ("점포코드", "바코드", "상품명", "조사수량", "AREA", "SECTION", "서가번호", "단", "열",
                "작업자코드", "작업자명", "실사일자", "실사시간")
-    data = [(r["store_code"], r["isbn"], r["book_name"], r["qty"], r["area"], r["section"], r["shelf_no"],
-             r["dan"], r["yeol"], r["worker_code"], r["worker_name"],
-             *split_scan_datetime(r["received_at"], r["survey_date"]))
-            for r in rows]
+    fix = fix_date_on(fix_key)
+    data = []
+    for r in rows:
+        scan_date, scan_time = split_scan_datetime(r["received_at"], r["survey_date"])
+        data.append((r["store_code"], r["isbn"], r["book_name"], r["qty"], r["area"], r["section"], r["shelf_no"],
+                     r["dan"], r["yeol"], r["worker_code"], r["worker_name"],
+                     file_date(app) if fix else scan_date, scan_time))
     return headers, data
 
 
@@ -379,8 +418,12 @@ def _loc_sort_key(loc):
     return (int(loc) if loc.isdigit() else 10 ** 12, loc)
 
 
-def stat_location_lines(app, stat_rows=None):
-    """납품로케이션데이터: `위치,바코드,수량` - (위치,바코드)별 수량 합계."""
+STAT_LOC_HEADERS = ("위치", "바코드", "수량")
+STAT_DET_HEADERS = ("조사일자", "납품처", "바코드", "수량", "구분코드", "단가+종류코드+위치", "페이지", "줄번호", "상품명")
+
+
+def stat_location_rows(app, stat_rows=None):
+    """납품로케이션데이터: (위치, 바코드, 수량) - (위치,바코드)별 수량 합계."""
     if stat_rows is None:
         stat_rows = split_counts(app)[1]
     tot = {}
@@ -390,19 +433,26 @@ def stat_location_lines(app, stat_rows=None):
             continue
         k = (stat_location(r["area"], r["section"]), bc13(isbn))
         tot[k] = tot.get(k, 0) + (r["qty"] or 0)
-    return [f"{loc},{isbn},{q}" for (loc, isbn), q in sorted(tot.items(), key=lambda kv: (_loc_sort_key(kv[0][0]), kv[0][1]))]
+    return [(loc, isbn, q) for (loc, isbn), q in sorted(tot.items(), key=lambda kv: (_loc_sort_key(kv[0][0]), kv[0][1]))]
+
+
+def stat_location_lines(app, stat_rows=None):
+    """납품로케이션데이터 txt: `위치,바코드,수량`."""
+    return [f"{loc},{isbn},{q}" for loc, isbn, q in stat_location_rows(app, stat_rows)]
 
 
 def _clean_text(s):
     return str(s or "").replace(",", " ").replace("\r", " ").replace("\n", " ").strip()
 
 
-def stat_detail_lines(app, stat_rows=None, stat=None):
-    """납품상세데이터: 스캔 1건당 1줄.
-    조사일자,납품처,바코드,수량,구분코드,단가+종류코드+위치,페이지,줄번호,상품명"""
+def stat_detail_rows(app, stat_rows=None, stat=None):
+    """납품상세데이터: 스캔 1건당 1행.
+    (조사일자, 납품처, 바코드, 수량, 구분코드, 단가+종류코드+위치, 페이지, 줄번호, 상품명)
+    조사일자 칸은 "날짜 고정"(FIX_DATE_ITEMS의 det)이 켜져 있으면 상품마스터에서 세팅한 조사일자,
+    꺼져 있으면 그 줄을 스캔한 날짜. 수량·페이지·줄번호는 정수, 나머지는 글자."""
     if stat_rows is None or stat is None:
         _b, stat_rows, stat = split_counts(app)
-    date = app.state.survey_date or today_str()
+    fix = fix_date_on("det")
     by_loc = {}
     for r in stat_rows:
         isbn = str(r["isbn"] or "").strip()
@@ -410,7 +460,7 @@ def stat_detail_lines(app, stat_rows=None, stat=None):
             continue
         loc = stat_location(r["area"], r["section"])
         by_loc.setdefault(loc, []).append(r)
-    lines = []
+    rows = []
     for loc in sorted(by_loc, key=_loc_sort_key):
         pages = {}
         for r in by_loc[loc]:
@@ -425,9 +475,14 @@ def stat_detail_lines(app, stat_rows=None, stat=None):
             for seq, r in enumerate(sorted(pages[key], key=lambda x: x["id"]), start=1):
                 isbn = str(r["isbn"]).strip()
                 name, price, dvsn, kcode, rdp = stat.get(norm_barcode(isbn), ("", 0, "", "", ""))
-                lines.append(",".join([date, rdp, bc13(isbn), str(r["qty"] or 0), dvsn,
-                                       f"{price}{kcode}{loc}", str(pno), str(seq), _clean_text(name)]))
-    return lines
+                date = _content_date(app, r["received_at"], r["survey_date"], fix)
+                rows.append((date, rdp, bc13(isbn), r["qty"] or 0, dvsn, f"{price}{kcode}{loc}", pno, seq, name))
+    return rows
+
+
+def stat_detail_lines(app, stat_rows=None, stat=None):
+    """납품상세데이터 txt: 위 행을 쉼표로 이은 한 줄씩(상품명 안의 쉼표·줄바꿈은 공백으로)."""
+    return [",".join([str(v) for v in r[:8]] + [_clean_text(r[8])]) for r in stat_detail_rows(app, stat_rows, stat)]
 
 
 def write_text_lines(lines, path, encoding="cp949"):
@@ -520,6 +575,80 @@ def shelf_rows(app):
     return headers, data
 
 
+# ---- 문구 결과확인리스트 / 로케이션별 스캔리스트 -------------------------------------------------
+# [2026-10-16] 서적 결과확인리스트·서가별스캔데이터와 같은 모양의 문구판. 기준 마스터가 서적 쪽(장부 서적 행)이
+# 아니라 문구 장부마스터(ledger_master.kind='문구')와 문구 스캔 행(AREA 20~29·80~89)이다.
+# 문구는 실재고·누락재고·예외여부를 쓰지 않으므로 F·G·H열은 제목도 값도 고정 "X".
+STAT_ITEM_LIST_HEADERS = ("바코드", "도서명", "분야", "출판사", "전산재고", "X", "X", "X", "스캔재고", "차이")
+STAT_SCAN_HEADERS = ("바코드", "도서명", "분야", "출판사", "로케이션", "실사수량")
+
+
+def _stat_ledger_map(store_code):
+    """문구 장부마스터만: 13자리 바코드 -> 행."""
+    return {bc13(k): v for k, v in _fetch_ledger_map(store_code).items() if (v["kind"] or "서적") == "문구"}
+
+
+def _stat_names_map(store_code):
+    """문구 상품마스터만: 13자리 바코드 -> 행(이름 보충용)."""
+    return {bc13(k): v for k, v in _fetch_books_map(store_code).items() if (v["kind"] or "서적") == "문구"}
+
+
+def stat_item_list_rows(app, include_zero=False, stat_rows=None):
+    """문구 결과확인리스트: 문구 장부마스터 전 품목 + 이번 조사의 문구 스캔재고/차이(차이 = 스캔재고 - 전산재고).
+    컬럼: 바코드,도서명,분야,출판사,전산재고,X,X,X,스캔재고,차이 (F·G·H는 제목·값 모두 "X").
+    include_zero=False면 전산재고와 스캔재고가 모두 0인 품목은 뺀다. 전산재고 칸이 마스터에서 X면 X로 보이고 차이 계산엔 0."""
+    store_code = app.state.store_code
+    ledger = _stat_ledger_map(store_code)
+    names = _stat_names_map(store_code)
+    if stat_rows is None:
+        stat_rows = split_counts(app)[1]
+    scanned, count_names = {}, {}
+    for r in stat_rows:
+        if not str(r["isbn"] or "").strip():
+            continue
+        k = bc13(r["isbn"])
+        scanned[k] = scanned.get(k, 0) + (r["qty"] or 0)
+        if k not in count_names:
+            count_names[k] = r["book_name"] or ""
+    data = []
+    for isbn in sorted(set(ledger) | set(scanned)):
+        b = ledger.get(isbn)
+        nm = names.get(isbn)
+        rcds = (b["rcds_qty"] if b is not None else 0) or 0
+        scan_qty = scanned.get(isbn, 0)
+        if not include_zero and rcds == 0 and scan_qty == 0:
+            continue
+        name = (b["book_name"] if b is not None and b["book_name"] else None) or (nm["book_name"] if nm is not None else "") \
+            or count_names.get(isbn, "")
+        category = (b["category"] if b is not None else "") or ""
+        publisher = (b["publisher"] if b is not None else "") or ""
+        d_rcds = disp_qty(rcds, b["rcds_x"]) if b is not None else rcds
+        data.append((isbn, name, category, publisher, d_rcds, "X", "X", "X", scan_qty, scan_qty - rcds))
+    return STAT_ITEM_LIST_HEADERS, data
+
+
+def stat_scan_rows(app, stat_rows=None):
+    """문구 로케이션별 스캔리스트: 스캔 1건당 1행(서가별스캔데이터의 문구판). 서가번호 대신 로케이션(AREA 2자리 + SECTION 3자리).
+    컬럼: 바코드,도서명,분야,출판사,로케이션,실사수량."""
+    store_code = app.state.store_code
+    ledger = _stat_ledger_map(store_code)
+    names = _stat_names_map(store_code)
+    if stat_rows is None:
+        stat_rows = split_counts(app)[1]
+    data = []
+    for r in sorted(stat_rows, key=lambda x: (bc13(x["isbn"]), _loc_sort_key(stat_location(x["area"], x["section"])), x["id"])):
+        isbn = str(r["isbn"] or "").strip()
+        if not isbn:
+            continue
+        k = bc13(isbn)
+        b, nm = ledger.get(k), names.get(k)
+        name = (nm["book_name"] if nm is not None and nm["book_name"] else None) or (b["book_name"] if b is not None else "") \
+            or (r["book_name"] or "")
+        data.append((k, name, (b["category"] if b is not None else "") or "", (b["publisher"] if b is not None else "") or "",
+                     stat_location(r["area"], r["section"]), r["qty"] or 0))
+    return STAT_SCAN_HEADERS, data
+
+
 def unregistered_rows(app):
     """자료생성(미등록): 상품마스터(books)에 없는 바코드이 스캔된 것만 모은다."""
     store_code = app.state.store_code
@@ -528,9 +657,14 @@ def unregistered_rows(app):
     registered = {norm_barcode(r["isbn"]) for r in conn.execute("SELECT isbn FROM books WHERE store_code=?", (store_code,))}
     conn.close()
     headers = ("AREA", "SECTION", "서가번호", "단", "열", "바코드", "상품명", "조사수량", "작업자명", "실사일자", "실사시간")
-    data = [(r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"], bc13(r["isbn"]), r["book_name"],
-             r["qty"], r["worker_name"], *split_scan_datetime(r["received_at"], r["survey_date"]))
-            for r in rows if norm_barcode(r["isbn"]) not in registered]
+    fix = fix_date_on("unreg")
+    data = []
+    for r in rows:
+        if norm_barcode(r["isbn"]) in registered:
+            continue
+        scan_date, scan_time = split_scan_datetime(r["received_at"], r["survey_date"])
+        data.append((r["area"], r["section"], r["shelf_no"], r["dan"], r["yeol"], bc13(r["isbn"]), r["book_name"],
+                     r["qty"], r["worker_name"], file_date(app) if fix else scan_date, scan_time))
     return headers, data
 
 
@@ -548,30 +682,66 @@ def generate_kyobo_data_1_2(app, out_dir):
     return results
 
 
-def stat_location_filename(app):
-    return f"문구전용_납품로케이션데이터_{app.state.survey_date or today_str()}.txt"
+def stat_location_filename(app, ext="txt"):
+    return f"문구전용_납품로케이션데이터_{file_date(app)}.{ext}"
 
 
-def stat_detail_filename(app):
-    return f"문구전용_납품상세데이터_{app.state.survey_date or today_str()}.txt"
+def stat_detail_filename(app, ext="txt"):
+    return f"문구전용_납품상세데이터_{file_date(app)}.{ext}"
 
 
-def generate_stat_files(app, out_dir):
-    """문구 납품 자료 2종을 쓰고 (파일이름, 줄 수) 리스트를 돌려준다.
-    문구 상품마스터가 없거나 문구 스캔이 없으면 빈 리스트."""
+def stat_scan_filename(app):
+    return f"{short_store_label(app.state.store_name)}_{scope.tag('문구')}_로케이션별스캔리스트({file_date(app)}).xlsx"
+
+
+STAT_FILE_KEYS = ("loc", "det", "loc_x", "det_x", "stat_list", "stat_scan")
+
+
+def write_stat_xlsx(path, headers, rows, qty_cols=()):
+    """문구 자료 엑셀: 바코드·위치·코드류는 글자 그대로(앞자리 0 보존), qty_cols 칸만 숫자 + 3자리 콤마. 열 너비는 자동."""
+    from . import fast_xlsx
+    fast_xlsx.write_xlsx(path, list(headers), rows, amount_cols=list(qty_cols))
+
+
+def generate_stat_files(app, out_dir, only=None, include_zero=False):
+    """문구 자료를 쓰고 (파일이름, 줄 수) 리스트를 돌려준다. only = STAT_FILE_KEYS 중 만들 것(None이면 전부):
+    loc/det = 납품로케이션·납품상세 txt, loc_x/det_x = 같은 내용의 xlsx, stat_list = 문구 결과확인리스트.xlsx,
+    stat_scan = 문구 로케이션별스캔리스트.xlsx. 문구 스캔이 없으면 빈 리스트."""
+    only = set(STAT_FILE_KEYS if only is None else only)
     _b, stat_rows, stat = split_counts(app)
     if not stat_rows:
         return []
-    loc_lines = stat_location_lines(app, stat_rows)
-    write_text_lines_file(loc_lines, out_dir / stat_location_filename(app))  # 숫자/ASCII뿐
-    det_lines = stat_detail_lines(app, stat_rows, stat)
-    write_text_lines(det_lines, out_dir / stat_detail_filename(app), "cp949")
-    return [(stat_location_filename(app), len(loc_lines)), (stat_detail_filename(app), len(det_lines))]
+    out = []
+    if "loc" in only:
+        lines = stat_location_lines(app, stat_rows)
+        write_text_lines_file(lines, out_dir / stat_location_filename(app))  # 숫자/ASCII뿐
+        out.append((stat_location_filename(app), len(lines)))
+    if "det" in only:
+        lines = stat_detail_lines(app, stat_rows, stat)
+        write_text_lines(lines, out_dir / stat_detail_filename(app), "cp949")
+        out.append((stat_detail_filename(app), len(lines)))
+    if "loc_x" in only:
+        rows = stat_location_rows(app, stat_rows)
+        write_stat_xlsx(out_dir / stat_location_filename(app, "xlsx"), STAT_LOC_HEADERS, rows, qty_cols=(2,))
+        out.append((stat_location_filename(app, "xlsx"), len(rows)))
+    if "det_x" in only:
+        rows = stat_detail_rows(app, stat_rows, stat)
+        write_stat_xlsx(out_dir / stat_detail_filename(app, "xlsx"), STAT_DET_HEADERS, rows, qty_cols=(3,))
+        out.append((stat_detail_filename(app, "xlsx"), len(rows)))
+    if "stat_list" in only:
+        headers, rows = stat_item_list_rows(app, include_zero=include_zero, stat_rows=stat_rows)
+        write_stat_xlsx(out_dir / item_list_filename(app, "문구"), headers, rows, qty_cols=(4, 8, 9))
+        out.append((item_list_filename(app, "문구"), len(rows)))
+    if "stat_scan" in only:
+        headers, rows = stat_scan_rows(app, stat_rows)
+        write_stat_xlsx(out_dir / stat_scan_filename(app), headers, rows, qty_cols=(5,))
+        out.append((stat_scan_filename(app), len(rows)))
+    return out
 
 
 def item_list_filename(app, kind="서적"):
-    return f"{short_store_label(app.state.store_name)}_{scope.tag(kind)}_결과확인리스트({app.state.survey_date or today_str()}).xlsx"
+    return f"{short_store_label(app.state.store_name)}_{scope.tag(kind)}_결과확인리스트({file_date(app)}).xlsx"
 
 
 def shelf_filename(app, kind="서적"):
-    return f"{short_store_label(app.state.store_name)}_{scope.tag(kind)}_서가별스캔데이터({app.state.survey_date or today_str()}).xlsx"
+    return f"{short_store_label(app.state.store_name)}_{scope.tag(kind)}_서가별스캔데이터({file_date(app)}).xlsx"

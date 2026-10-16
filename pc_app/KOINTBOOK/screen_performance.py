@@ -54,7 +54,7 @@ from . import barcode_kind
 from .virtual_table import VirtualTable
 from .ui_common import (
     center_on_app,
-    setup_treeview, export_rows_to_excel, today_str, normalize_area,
+    setup_treeview, export_rows_to_excel, file_date, normalize_area,
     digit_code_variants as _digit_code_variants,
     CL_BG, CL_NAVY, CL_TEXT, CL_TEXT_DIM, win_button, split_scan_datetime
 )
@@ -679,7 +679,7 @@ class PerformanceScreen(tk.Frame):
             messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
             return
         headers = ("점포코드", "바코드", "도서명", "조사수량", "AREA", "SECTION", "서가번호", "단", "열", "작업자", "실사일자", "실사시간")
-        path = export_rows_to_excel(rows, headers, default_name=f"실적관리_{today_str()}.xlsx", parent=self)
+        path = export_rows_to_excel(rows, headers, default_name=f"실적관리_{file_date(self.app)}.xlsx", parent=self)
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")
 

@@ -58,7 +58,7 @@ from . import barcode_kind
 from .progress_dialog import run_with_progress
 from .ui_common import (
     COLOR_HEADER_BG, setup_treeview, export_rows_to_excel,
-    today_str, split_scan_datetime, CL_BG, CL_NAVY, CL_GOLD, CL_TEXT_DIM, win_button
+    file_date, split_scan_datetime, CL_BG, CL_NAVY, CL_GOLD, CL_TEXT_DIM, win_button
 )
 
 # [2026-09-28] 작업자별 실사집계 막대그래프에 쓰는 색상 순환(ZZOINT와 동일).
@@ -747,6 +747,6 @@ class PdaReceiveScreen(tk.Frame):
         if not rows:
             messagebox.showinfo("알림", "저장할 데이터가 없습니다. (수신 대기 목록 기준)")
             return
-        path = export_rows_to_excel(rows, STAGE_HEADINGS[1:], default_name=f"PDA수신_{today_str()}.xlsx", parent=self)
+        path = export_rows_to_excel(rows, STAGE_HEADINGS[1:], default_name=f"PDA수신_{file_date(self.app)}.xlsx", parent=self)
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")

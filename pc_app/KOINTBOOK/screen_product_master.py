@@ -52,7 +52,7 @@ from .masters import disp_qty, disp_exc
 from .ui_common import (
     center_on_app,
     COLOR_HEADER_BG, setup_treeview, read_excel_columns, read_csv_columns, export_rows_to_excel,
-    today_str, open_calendar_picker, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
+    file_date, open_calendar_picker, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
 )
 
 # 점포코드/점포명을 "값을 보여주기만 하는" 굵은 글씨 칸으로 그릴 때 쓰는
@@ -369,7 +369,7 @@ class ProductMasterScreen(tk.Frame):
             messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
             return
         headers = ("구분", "바코드", "도서명", "분야명", "출판사", "전산재고", "실재고", "누락재고", "예외여부")
-        path = export_rows_to_excel(self._view_rows_cache, headers, default_name=f"상품마스터_{today_str()}.xlsx", parent=self)
+        path = export_rows_to_excel(self._view_rows_cache, headers, default_name=f"상품마스터_{file_date(self.app)}.xlsx", parent=self)
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")
 

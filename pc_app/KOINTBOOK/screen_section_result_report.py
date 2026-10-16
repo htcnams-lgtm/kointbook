@@ -10,7 +10,7 @@ SECTION(AREA-SECTION)별 건수/재고수량을 인쇄용 3단 배치(왼쪽부�
 import tkinter as tk
 from tkinter import messagebox
 from . import db as dbmod
-from .ui_common import setup_treeview, export_rows_to_excel, print_rows_to_excel, print_excel_file, today_str, \
+from .ui_common import setup_treeview, export_rows_to_excel, print_rows_to_excel, print_excel_file, file_date, \
     normalize_area, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
 
 
@@ -97,7 +97,7 @@ class SectionResultReportScreen(tk.Frame):
             messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
             return
         headers = ("Location", "건수", "재고수량")
-        path = export_rows_to_excel(self._flat, headers, default_name=f"섹션별결과보고서_{today_str()}.xlsx", parent=self)
+        path = export_rows_to_excel(self._flat, headers, default_name=f"섹션별결과보고서_{file_date(self.app)}.xlsx", parent=self)
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")
 
@@ -111,7 +111,7 @@ class SectionResultReportScreen(tk.Frame):
             messagebox.showinfo("알림", "인쇄할 데이터가 없습니다.")
             return
         headers = ("Location", "건수", "재고수량")
-        path = print_rows_to_excel(self._flat, headers, default_name=f"섹션별결과보고서_{today_str()}.xlsx")
+        path = print_rows_to_excel(self._flat, headers, default_name=f"섹션별결과보고서_{file_date(self.app)}.xlsx")
         if not path:
             return
         print_excel_file(path)

@@ -169,6 +169,16 @@ def today_str():
     return datetime.now().strftime("%Y%m%d")
 
 
+def file_date(app):
+    """[2026-10-16] 엑셀 파일 이름에 붙이는 날짜 - 컴퓨터의 오늘 날짜가 아니라 상품마스터에서
+    세팅한 조사일자(YYYYMMDD). 조사일자가 비어 있을 때만 오늘 날짜를 쓴다."""
+    try:
+        d = str(app.state.survey_date or "").strip()
+    except AttributeError:
+        d = ""
+    return d or today_str()
+
+
 def make_labeled_entry(parent, label_text, width=15, readonly=False):
     frame = tk.Frame(parent, bg=COLOR_HEADER_BG)
     tk.Label(frame, text=label_text, bg=COLOR_HEADER_BG, fg=CL_TEXT_DIM).pack(side=tk.LEFT, padx=(4, 4))
@@ -523,10 +533,12 @@ def apply_amount_format(ws, headers, first_row=2, last_row=None):
 def write_rows_to_excel_file(rows, headers, path):
     """rows를 이미 정해진 경로(path)에 엑셀 파일로 그대로 저장한다 (다이얼로그
     없이 - 저장 위치를 미리 골라둔 여러 파일을 한 번에 저장할 때 사용).
-    빠른 저장기(fast_xlsx)로 쓴다 - 모양(굵은 제목줄, 열 너비 16, 수량/금액 콤마 서식)은
-    예전 openpyxl 저장과 같고 속도는 약 7배 빠르다."""
+    빠른 저장기(fast_xlsx)로 쓴다 - 굵은 제목줄, 수량/금액 콤마 서식은 예전 openpyxl 저장과 같고
+    속도는 약 7배 빠르다. 열 너비는 내용에 맞춰 자동(2026-10-16)."""
     from . import fast_xlsx
     headers = list(headers)
+    if not isinstance(rows, (list, tuple)):
+        rows = list(rows)
     fast_xlsx.write_xlsx(path, headers, rows, amount_cols=fast_xlsx.amount_cols_for(headers, is_amount_header))
 
 
@@ -559,7 +571,9 @@ def _write_plain_workbook_with_progress(path, rows, headers, progress=None):
                 _report(progress, done=idx)
                 progress.check_cancel()  # [취소] 눌렀으면 여기서 Cancelled 예외로 중단
 
-    fast_xlsx.write_xlsx(path, headers, _rows(), amount_cols=fast_xlsx.amount_cols_for(headers, is_amount_header))
+    amount_cols = fast_xlsx.amount_cols_for(headers, is_amount_header)
+    widths = fast_xlsx.auto_widths(headers, rows, amount_cols)   # [2026-10-16] 열 너비 자동 맞춤
+    fast_xlsx.write_xlsx(path, headers, _rows(), amount_cols=amount_cols, widths=widths)
     _report(progress, message="파일에 쓰는 중...", done=total)
 
 
@@ -685,6 +699,7 @@ def print_rows_to_excel(rows, headers, default_name="print.xlsx"):
     os.makedirs(tmp_dir, exist_ok=True)
     stamped_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{default_name}"
     path = os.path.join(tmp_dir, stamped_name)
+    rows = list(rows)   # 열 너비 자동 맞춤이 값을 한 번 더 훑는다
     try:
         import openpyxl
         from openpyxl.styles import Font
@@ -695,8 +710,9 @@ def print_rows_to_excel(rows, headers, default_name="print.xlsx"):
             cell.font = Font(bold=True)
         for row in rows:
             ws.append(list(row))
-        for i, _ in enumerate(headers, start=1):
-            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = 16
+        from . import fast_xlsx
+        for i, w in enumerate(fast_xlsx.auto_widths(headers, rows, fast_xlsx.amount_cols_for(headers, is_amount_header)), start=1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w   # [2026-10-16] 내용에 맞춰 자동
         apply_amount_format(ws, headers)
         wb.save(path)
         return path
@@ -906,8 +922,9 @@ def export_summary_excel_with_chart(rows, headers, default_name="summary.xlsx",
             cell.font = Font(bold=True)
         for row in rows:
             ws.append(list(row))
-        for i, _ in enumerate(headers, start=1):
-            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = 16
+        from . import fast_xlsx
+        for i, w in enumerate(fast_xlsx.auto_widths(headers, rows, fast_xlsx.amount_cols_for(headers, is_amount_header)), start=1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w   # [2026-10-16] 내용에 맞춰 자동
         apply_amount_format(ws, headers)
 
         try:

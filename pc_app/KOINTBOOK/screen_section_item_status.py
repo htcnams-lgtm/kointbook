@@ -25,7 +25,7 @@ import tkinter as tk
 from tkinter import messagebox
 from . import db as dbmod
 from .virtual_table import VirtualList, ListModel
-from .ui_common import setup_treeview, export_rows_to_excel, print_rows_to_excel, print_excel_file, today_str, \
+from .ui_common import setup_treeview, export_rows_to_excel, print_rows_to_excel, print_excel_file, file_date, \
     normalize_area, digit_code_variants, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
 
 # [2026-09-28] "실적관리 목록등 프로그램 전체 목록이 렉 없이 화면전환/
@@ -208,7 +208,7 @@ class SectionItemStatusScreen(tk.Frame):
             messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
             return
         headers = ("LOCATION", "바코드", "도서명", "재고수량")
-        path = export_rows_to_excel(self._rows, headers, default_name=f"섹션별아이템재고현황_{today_str()}.xlsx", parent=self)
+        path = export_rows_to_excel(self._rows, headers, default_name=f"섹션별아이템재고현황_{file_date(self.app)}.xlsx", parent=self)
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")
 
@@ -225,7 +225,7 @@ class SectionItemStatusScreen(tk.Frame):
             messagebox.showinfo("알림", "인쇄할 데이터가 없습니다.")
             return
         headers = ("LOCATION", "바코드", "도서명", "재고수량")
-        path = print_rows_to_excel(self._rows, headers, default_name=f"섹션별아이템재고현황_{today_str()}.xlsx")
+        path = print_rows_to_excel(self._rows, headers, default_name=f"섹션별아이템재고현황_{file_date(self.app)}.xlsx")
         if not path:
             return
         print_excel_file(path)
