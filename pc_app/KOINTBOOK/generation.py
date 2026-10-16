@@ -435,6 +435,10 @@ def _loc_sort_key(loc):
 
 
 
+STAT_LOC_HEADERS = ("위치", "바코드", "수량")
+STAT_DET_HEADERS = ("날짜", "점포코드", "바코드", "수량", "가격", "구분코드", "종류코드", "에리어+로케이션", "단", "열", "상품명")
+
+
 def stat_location_rows(app, stat_rows=None):
     """납품로케이션데이터: (위치, 바코드, 수량) - (위치,바코드)별 수량 합계."""
     if stat_rows is None:
@@ -742,7 +746,7 @@ def stat_scan_filename(app):
     return f"{short_store_label(app.state.store_name)}_{scope.tag('문구')}_로케이션별스캔데이터({file_date(app)}).xlsx"
 
 
-STAT_FILE_KEYS = ("loc", "det", "stat_scan", "stat_list")  # 화면에 보이는 순서(로케이션별스캔데이터가 결과확인리스트 위)
+STAT_FILE_KEYS = ("loc", "det", "loc_x", "det_x", "stat_scan", "stat_list")  # 화면에 보이는 순서(txt 밑에 같은 내용 xlsx, 그 아래 로케이션별스캔데이터, 결과확인리스트)
 
 
 def write_stat_xlsx(path, headers, rows, qty_cols=()):
@@ -753,8 +757,8 @@ def write_stat_xlsx(path, headers, rows, qty_cols=()):
 
 def generate_stat_files(app, out_dir, only=None, include_zero=True):
     """문구 자료를 쓰고 (파일이름, 줄 수) 리스트를 돌려준다. only = STAT_FILE_KEYS 중 만들 것(None이면 전부):
-    loc/det = 납품로케이션·납품상세 txt, stat_scan = 문구 로케이션별스캔데이터.xlsx, stat_list = 문구 결과확인리스트.xlsx.
-    [2026-10-16] txt와 같은 내용의 xlsx(납품로케이션·납품상세)는 뺐다. 문구 스캔이 없으면 빈 리스트. txt는 모두 UTF-8."""
+    loc/det = 납품로케이션·납품상세 txt, loc_x/det_x = 같은 내용의 xlsx(납품상세 txt 밑, [2026-10-16] 사용자 요청으로 복구),
+    stat_scan = 문구 로케이션별스캔데이터.xlsx, stat_list = 문구 결과확인리스트.xlsx. 문구 스캔이 없으면 빈 리스트. txt는 모두 UTF-8."""
     only = set(STAT_FILE_KEYS if only is None else only)
     _b, stat_rows, stat = split_counts(app)
     if not stat_rows:
@@ -768,6 +772,14 @@ def generate_stat_files(app, out_dir, only=None, include_zero=True):
         lines = stat_detail_lines(app, stat_rows, stat)
         write_text_lines(lines, out_dir / stat_detail_filename(app))
         out.append((stat_detail_filename(app), len(lines)))
+    if "loc_x" in only:
+        rows = stat_location_rows(app, stat_rows)
+        write_stat_xlsx(out_dir / stat_location_filename(app, "xlsx"), STAT_LOC_HEADERS, rows, qty_cols=(2,))
+        out.append((stat_location_filename(app, "xlsx"), len(rows)))
+    if "det_x" in only:
+        rows = stat_detail_rows(app, stat_rows, stat)
+        write_stat_xlsx(out_dir / stat_detail_filename(app, "xlsx"), STAT_DET_HEADERS, rows, qty_cols=(3, 4))
+        out.append((stat_detail_filename(app, "xlsx"), len(rows)))
     if "stat_scan" in only:
         headers, rows = stat_scan_rows(app, stat_rows)
         write_stat_xlsx(out_dir / stat_scan_filename(app), headers, rows, qty_cols=(5,))

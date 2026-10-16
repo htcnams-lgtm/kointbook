@@ -32,7 +32,12 @@ DAN은 빼고 바코드를 추가했다(최종 순서: 전체/AREA/SECTION/서�
 엑셀저장/발행은 재고조사 차이내역과 같은 양식(상단 기업명·점포·검수자·조사일자·
 출력일자 정보 블록 + 페이지 머리글/바닥글)으로 만들고, 제목은 "섹션별 아이템
 재고현황", 정보 블록 가운데 칸(차이수량 조건 자리)에는 조회한 범위(AREA/SECTION/
-서가번호)를 적는다. [발행]/[엑셀저장]은 [조회] 버튼 바로 옆으로 옮겼다."""
+서가번호)를 적는다. [발행]/[엑셀저장]은 [조회] 버튼 바로 옆으로 옮겼다.
+
+[2026-10-16] "AREA 10에 SECTION 001~002 범위를 지정" - AREA+SECTION 조회의 SECTION 칸을 시작~끝 두 칸으로
+나눴다(`SECTION [001] ~ [002]`). 끝 칸을 비우면 예전처럼 SECTION 하나만, 시작이 끝보다 크면 자동으로 바꿔서
+조회하고, 범위는 숫자 크기로 비교한다(01과 1이 같은 SECTION). 조회 조건 표시와 엑셀 정보 블록에는
+`SECTION : 001~002`로 적는다. 섹션소계는 섹션마다, 합계는 범위 전체의 합이다."""
 
 import os
 import tempfile
@@ -166,13 +171,36 @@ def _code_text(value, width):
     return text.zfill(width) if text.isdigit() else text
 
 
-def build_range_text(mode, value="", area_kw="", section_kw=""):
+def section_range(start, end):
+    """SECTION 시작~끝 칸 -> (작은 값, 큰 값) 정수. 둘 다 숫자일 때만 범위로 보고, 아니면 None.
+    시작이 끝보다 크면 자동으로 바꾼다."""
+    start, end = (start or "").strip(), (end or "").strip()
+    if not (start.isdigit() and end.isdigit()):
+        return None
+    lo, hi = int(start), int(end)
+    return (lo, hi) if lo <= hi else (hi, lo)
+
+
+def section_range_text(start, end):
+    """조회 범위·조건 표시에 적을 SECTION 글자: 범위면 `001~002`, 하나면 `001`, 없으면 `전체`."""
+    start, end = (start or "").strip(), (end or "").strip()
+    if not start and end:
+        start, end = end, ""
+    if not end:
+        return _code_text(start, 3)
+    rng = section_range(start, end)
+    if rng:
+        return f"{rng[0]:03d}~{rng[1]:03d}"
+    return f"{start}~{end}"
+
+
+def build_range_text(mode, value="", area_kw="", section_kw="", section_end_kw=""):
     """엑셀 정보 블록 가운데 칸에 적을 "조회한 범위" 글자. 바코드로 찾은 경우만 바코드를 덧붙인다."""
     area = section = shelf = "전체"
     barcode = ""
     value = (value or "").strip()
     if mode == "AREA+SECTION":
-        area, section = _code_text(area_kw, 2), _code_text(section_kw, 3)
+        area, section = _code_text(area_kw, 2), section_range_text(section_kw, section_end_kw)
     elif mode == "AREA":
         area = _code_text(value, 2)
     elif mode == "SECTION":
@@ -234,6 +262,11 @@ class SectionItemStatusScreen(tk.Frame):
         self.e_section_kw = tk.Entry(self.search_area_section_frame, width=6)
         self.e_section_kw.bind("<Return>", lambda ev: self.refresh())
         self.e_section_kw.pack(side=tk.LEFT, padx=(2, 0))
+        # [2026-10-16] SECTION 범위: 시작 ~ 끝. 끝 칸을 비우면 시작 SECTION 하나만 조회한다.
+        tk.Label(self.search_area_section_frame, text="~", bg=CL_BG).pack(side=tk.LEFT, padx=2)
+        self.e_section_end_kw = tk.Entry(self.search_area_section_frame, width=6)
+        self.e_section_end_kw.bind("<Return>", lambda ev: self.refresh())
+        self.e_section_end_kw.pack(side=tk.LEFT)
 
         self._on_mode_changed(do_refresh=False)
 
@@ -255,7 +288,7 @@ class SectionItemStatusScreen(tk.Frame):
         # [2026-09-24 정정] 조건 표시 라벨에 주황색 음영(bg="#F4A93B")이 있었는데,
         # 사용자가 이 음영을 없애 달라고 해서 다른 화면들처럼 배경 없는 일반
         # 텍스트로 바꿨다(배경은 화면 배경색 그대로, 글자색은 남색).
-        self.lbl_condition = tk.Label(actions, text="", bg=CL_BG, fg=CL_NAVY, font=("", 10, "bold"), width=24)
+        self.lbl_condition = tk.Label(actions, text="", bg=CL_BG, fg=CL_NAVY, font=("", 10, "bold"), width=32)
         self.lbl_condition.pack(side=tk.LEFT, padx=(0, 20))
 
         # 가상 스크롤 표(virtual_table.py): 화면에 보이는 줄만 두고 스크롤할 때 글자만 바꾼다.
@@ -293,17 +326,27 @@ class SectionItemStatusScreen(tk.Frame):
         value = self.e_value.get().strip()
         area_kw = self.e_area_kw.get().strip()
         section_kw = self.e_section_kw.get().strip()
+        section_end_kw = self.e_section_end_kw.get().strip()
+        if not section_kw and section_end_kw:   # 끝 칸에만 적었으면 그 SECTION 하나로 본다
+            section_kw, section_end_kw = section_end_kw, ""
+        section_rng = None
+        if mode == "AREA+SECTION" and section_end_kw:
+            section_rng = section_range(section_kw, section_end_kw)
+            if section_rng is None:
+                messagebox.showwarning("알림", "SECTION 범위는 숫자로 입력하세요. (예: 001 ~ 002)")
+                return
         merged = self.merge_mode.get() == "합산후"
         # [2026-09-23 정정] "전체 조회"라는 문구를 없앴다 - 전체를 고르면
         # 조건 표시 자체를 비워둔다.
         if mode == "AREA+SECTION":
-            cond_text = f"AREA '{area_kw}' + SECTION '{section_kw}'" if (area_kw or section_kw) else "AREA+SECTION"
+            cond_text = (f"AREA '{area_kw}' + SECTION '{section_range_text(section_kw, section_end_kw)}'"
+                         if (area_kw or section_kw) else "AREA+SECTION")
         else:
             cond_text = f"{mode}{(' = ' + value) if value else ''}" if mode != "전체" else ""
         self.lbl_condition.config(text=cond_text)
         # [2026-10-16] 엑셀 정보 블록에 적을 "조회한 범위" - 조회 순간의 조건으로 기억해 둔다
         # (조회 뒤에 입력칸만 고쳐 놓고 저장해도 표에 있는 내용과 같은 범위가 적히도록).
-        self._range_text = build_range_text(mode, value, area_kw, section_kw)
+        self._range_text = build_range_text(mode, value, area_kw, section_kw, section_end_kw)
 
         store_code = self.app.state.store_code
         date = self.app.state.survey_date
@@ -324,7 +367,12 @@ class SectionItemStatusScreen(tk.Frame):
                 variants = digit_code_variants(area_kw, 2)
                 sql += f" AND area IN ({','.join('?' for _ in variants)})"
                 params.extend(variants)
-            if section_kw:
+            if section_rng:
+                # 숫자 크기로 비교한다(01과 1, 001이 모두 같은 SECTION). 숫자가 아닌 SECTION 값은 범위에서 뺀다.
+                sql += (" AND section<>'' AND section NOT GLOB '*[^0-9]*'"
+                        " AND CAST(section AS INTEGER) BETWEEN ? AND ?")
+                params.extend(section_rng)
+            elif section_kw:
                 variants = digit_code_variants(section_kw, 3)
                 sql += f" AND section IN ({','.join('?' for _ in variants)})"
                 params.extend(variants)

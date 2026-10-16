@@ -344,7 +344,7 @@ class AreaSumScreen(tk.Frame):
             messagebox.showinfo("알림", "문구 실사 자료가 없습니다. (구분 범위 또는 문구 상품마스터를 확인하세요)")
             return
         summary = "\n".join(f"{name} ({count:,}건)" for name, count in results)
-        messagebox.showinfo("완료", f"문구 자료가 생성되었습니다(납품 txt, 로케이션별스캔데이터, 결과확인리스트):\n{out_dir}\n\n{summary}")
+        messagebox.showinfo("완료", f"문구 자료가 생성되었습니다(납품 txt·xlsx, 로케이션별스캔데이터, 결과확인리스트):\n{out_dir}\n\n{summary}")
 
     def generate_unregistered(self):
         kind = self.bar.kind()
