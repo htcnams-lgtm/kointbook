@@ -421,6 +421,7 @@ def stat_detail_rows(app, stat_rows=None, stat=None):
     if stat_rows is None or stat is None:
         _b, stat_rows, stat = split_counts(app)
     date = file_date(app)
+    ledger_names = _stat_ledger_map(app.state.store_code)  # [2026-10-16] 상품명은 문구 장부마스터 우선(단가·코드는 상품마스터만 줌)
     by_loc = {}
     for r in nonzero_rows(stat_rows):  # 수량 0 줄은 빼고 페이지·줄번호를 매긴다(번호가 비지 않게)
         isbn = str(r["isbn"] or "").strip()
@@ -443,6 +444,9 @@ def stat_detail_rows(app, stat_rows=None, stat=None):
             for seq, r in enumerate(sorted(pages[key], key=lambda x: x["id"]), start=1):
                 isbn = str(r["isbn"]).strip()
                 name, price, dvsn, kcode, rdp = stat.get(norm_barcode(isbn), ("", 0, "", "", ""))
+                lg = ledger_names.get(bc13(isbn))
+                if lg is not None and lg["book_name"]:
+                    name = lg["book_name"]
                 rows.append((date, rdp, bc13(isbn), r["qty"] or 0, dvsn, f"{price}{kcode}{loc}", pno, seq, name))
     return rows
 
@@ -464,7 +468,7 @@ def write_text_lines(lines, path):
         f.write(("\r\n".join(lines) + ("\r\n" if (lines and eof_crlf_enabled()) else "")).encode("utf-8"))
 
 
-def item_list_rows(app, include_zero=False):
+def item_list_rows(app, include_zero=True):
     """③ 단품 리스트생성 (결과확인리스트): 상품마스터 전체 품목에 이번
     조사의 스캔재고/차이를 더한 비교표.
     컬럼: 바코드,도서명,분야,출판사,전산재고,실재고,누락재고,예외여부,
@@ -474,7 +478,8 @@ def item_list_rows(app, include_zero=False):
     # 장부마스터에 없는 바코드는 상품마스터의 이름 정보만 빌리고 수량은 0으로 본다.
     # [2026-10-13] 서적만: 문구 행은 문구 납품 자료 쪽에서 다룬다.
     # [2026-10-13] 바코드는 모두 13자리(bc13)로 맞춰 비교한다(마스터 0000000000001 / 스캔 1).
-    # include_zero=True 이면 전산재고·실재고·스캔이 모두 0인 품목도 넣는다(화면의 체크 옵션).
+    # include_zero=True(기본) 이면 전산재고·실재고·스캔이 모두 0인 품목도 넣는다(화면의 체크 옵션, 받은 쪽 파일도 장부 전체 행).
+    # [2026-10-16] 기본값을 False -> True로(AREA별 합산 화면에서도 전체 행).
     ledger_map = {bc13(k): v for k, v in _fetch_ledger_map(store_code).items() if (v["kind"] or "서적") != "문구"}
     names_map = {bc13(k): v for k, v in _fetch_books_map(store_code).items() if (v["kind"] or "서적") != "문구"}
     counts = split_counts(app)[0]
@@ -524,17 +529,22 @@ def item_list_rows(app, include_zero=False):
 
 def shelf_rows(app):
     """④ 서가별 생성 (서가별스캔데이터): 스캔 1건당 1행(집계하지 않음).
-    컬럼: 바코드,도서명,분야,출판사,서가번호,실사수량."""
+    컬럼: 바코드,도서명,분야,출판사,서가번호,실사수량.
+    [2026-10-16] 도서명·분야·출판사는 서적 장부마스터 기준, 장부마스터에 없는 바코드만 서적 상품마스터로 보충한다
+    (받은 쪽 서가별스캔데이터가 모두 장부마스터 값이었음). 둘 다 없으면 스캔 때 저장된 이름. 실사수량 0인 줄은 뺀다."""
     store_code = app.state.store_code
-    books_map = {bc13(k): v for k, v in _fetch_books_map(store_code).items()}
+    ledger_map = {bc13(k): v for k, v in _fetch_ledger_map(store_code).items() if (v["kind"] or "서적") != "문구"}
+    books_map = {bc13(k): v for k, v in _fetch_books_map(store_code).items() if (v["kind"] or "서적") != "문구"}
     rows = nonzero_rows(split_counts(app)[0])  # 서적 행만, 실사수량 0 줄 제외
     data = []
     for r in sorted(rows, key=lambda x: (bc13(x["isbn"]), shelf_code(x, store_code))):
         isbn = str(r["isbn"] or "").strip()
         if not isbn:
             continue
-        b = books_map.get(bc13(isbn))
-        book_name = b["book_name"] if b else (r["book_name"] or "")
+        b = ledger_map.get(bc13(isbn))
+        if b is None:
+            b = books_map.get(bc13(isbn))
+        book_name = (b["book_name"] if b else "") or (r["book_name"] or "")
         category = b["category"] if b else ""
         publisher = b["publisher"] if b else ""
         loc = shelf_code(r, store_code)
@@ -563,7 +573,7 @@ def _stat_names_map(store_code):
     return {bc13(k): v for k, v in _fetch_books_map(store_code).items() if (v["kind"] or "서적") == "문구"}
 
 
-def stat_item_list_rows(app, include_zero=False, stat_rows=None):
+def stat_item_list_rows(app, include_zero=True, stat_rows=None):
     """문구 결과확인리스트: 문구 장부마스터 전 품목 + 이번 조사의 문구 스캔재고/차이(차이 = 스캔재고 - 장부재고).
     컬럼: 바코드,상품명,상품구분,매입처,장부재고,X,X,X,스캔재고,차이 (F·G·H는 제목·값 모두 "X").
     include_zero=False면 장부재고와 스캔재고가 모두 0인 품목은 뺀다. 장부재고 칸이 마스터에서 X면 X로 보이고 차이 계산엔 0."""
@@ -617,7 +627,8 @@ def stat_scan_rows(app, stat_rows=None):
     for key in sorted((k for k in tot if tot[k] != 0), key=lambda k: (k[0], _loc_sort_key(k[1]))):
         k, loc = key
         b, nm = ledger.get(k), names.get(k)
-        name = (nm["book_name"] if nm is not None and nm["book_name"] else None) or (b["book_name"] if b is not None else "") \
+        # [2026-10-16] 상품명은 문구 장부마스터 기준, 장부에 없을 때만 문구 상품마스터로 보충
+        name = (b["book_name"] if b is not None and b["book_name"] else None) or (nm["book_name"] if nm is not None else "") \
             or (first[key]["book_name"] or "")
         data.append((k, name, (b["category"] if b is not None else "") or "", (b["publisher"] if b is not None else "") or "",
                      loc, tot[key]))
@@ -673,7 +684,7 @@ def write_stat_xlsx(path, headers, rows, qty_cols=()):
     fast_xlsx.write_xlsx(path, list(headers), rows, amount_cols=list(qty_cols))
 
 
-def generate_stat_files(app, out_dir, only=None, include_zero=False):
+def generate_stat_files(app, out_dir, only=None, include_zero=True):
     """문구 자료를 쓰고 (파일이름, 줄 수) 리스트를 돌려준다. only = STAT_FILE_KEYS 중 만들 것(None이면 전부):
     loc/det = 납품로케이션·납품상세 txt, loc_x/det_x = 같은 내용의 xlsx, stat_list = 문구 결과확인리스트.xlsx,
     stat_scan = 문구 로케이션별스캔리스트.xlsx. 문구 스캔이 없으면 빈 리스트. txt는 모두 UTF-8."""

@@ -961,14 +961,16 @@ class DiffDetailScreen(tk.Frame):
             if threshold is not None and abs(diff_qty) < threshold:
                 continue
 
-            book_name = group[0]["book_name"] if group else (b["book_name"] if b else (lg["book_name"] if lg else ""))
+            # [2026-10-16] 도서명은 장부마스터 기준, 장부에 없으면 상품마스터로 보충, 둘 다 없으면 스캔 때 저장된 이름.
+            master_name = (lg["book_name"] if lg and lg["book_name"] else None) or (b["book_name"] if b and b["book_name"] else None)
+            book_name = master_name or (group[0]["book_name"] if group else "")
 
             detail_rows = []
             if group:
                 # 위치별 상세 줄: 실사수량만 채우고 전산재고류는 빈칸.
                 for r in group:
                     area = normalize_area(r["area"], merged=merged)
-                    detail_rows.append((r["book_name"], isbn, area, r["section"], r["dan"], r["yeol"], r["shelf_no"],
+                    detail_rows.append((master_name or r["book_name"], isbn, area, r["section"], r["dan"], r["yeol"], r["shelf_no"],
                                          blank, blank, blank, blank, r["qty"], blank, blank))
             else:
                 # 스캔기록이 아예 없는 상품마스터 항목: 도서명/바코드만 채운
