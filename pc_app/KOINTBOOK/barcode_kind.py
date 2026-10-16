@@ -4,14 +4,12 @@
 """
 서적 AREA에 문구 상품, 문구 AREA에 서적 상품이 들어가는 것을 막기 위한 바코드 종류 판정. [2026-10-16]
 
-PDA(BarcodeKind.kt)와 같은 규칙이다:
-  1) 상품마스터(books)에 있으면 마스터의 구분(kind)을 그대로 쓴다.
-  2) 마스터에 없으면 바코드 모양으로 판단한다 - 978/979(도서)·977(잡지)로 시작하는 13자리,
-     또는 검사숫자가 맞는 ISBN-10이면 서적, 나머지는 문구.
-     (한계: 마스터에 없는 문구 바코드가 우연히 978로 시작하면 서적으로 오판한다.)
-
+PDA(BarcodeKind.kt)와 같은 규칙이다: 상품마스터를 [서적 불러오기]/[문구 불러오기]로 따로 불러오면
+books.kind에 '서적'/'문구'가 붙는다. 이 구분을 AREA의 구분과 비교한다.
+  - 마스터에 없는 바코드(미등록)는 서적인지 문구인지 알 수 없으므로 여기서는 막지 않는다
+    (기존 [미등록상품] 설정 허용/경고/차단이 처리한다).
 AREA의 구분은 scope.kind_of_area(서적 10~19·90~99 / 문구 20~29·80~89)를 쓴다. 허용 밖 AREA는
-구분할 수 없으므로 여기서는 통과시킨다(그쪽은 AREA 검사가 따로 막는다).
+구분할 수 없으므로 통과시킨다(그쪽은 AREA 검사가 따로 막는다).
 이 모듈은 tkinter를 쓰지 않는다.
 """
 
@@ -20,27 +18,6 @@ from .masters import bc13, norm_barcode
 
 KIND_BOOK = "서적"
 KIND_STAT = "문구"
-
-
-def _isbn10_ok(s):
-    total = 0
-    for i, ch in enumerate(s):
-        if ch.isdigit():
-            v = int(ch)
-        elif i == 9 and ch in "Xx":
-            v = 10
-        else:
-            return False
-        total += v * (10 - i)
-    return total % 11 == 0
-
-
-def looks_like_book(code):
-    """바코드 모양만으로 서적(도서/잡지)인지."""
-    s = str(code or "").strip().replace("-", "").replace(" ", "")
-    if len(s) == 13 and s.isdigit():
-        return s.startswith(("978", "979", "977"))
-    return len(s) == 10 and _isbn10_ok(s)
 
 
 def _variants(code):
@@ -97,17 +74,14 @@ def bulk_master_kinds(conn, store_code, codes):
 
 
 def _evaluate(area, code, kinds):
-    """AREA 구분과 바코드 구분이 다르면 정보 dict, 아니면 None. kinds는 마스터에서 찾은 구분 집합(없으면 빈 집합)."""
+    """AREA 구분과 바코드 구분이 다르면 정보 dict, 아니면 None. kinds는 마스터에서 찾은 구분 집합.
+    마스터에 없으면(빈 집합) 구분할 수 없어 None(통과)."""
     area_kind = scope.kind_of_area(area)
-    if area_kind is None or not code:
+    if area_kind is None or not code or not kinds:
         return None
-    from_master = bool(kinds)
-    if not kinds:
-        kinds = {KIND_BOOK if looks_like_book(code) else KIND_STAT}
     if area_kind in kinds:
         return None
-    return dict(area=str(area or ""), area_kind=area_kind, item_kind=sorted(kinds)[0],
-                from_master=from_master, code=code)
+    return dict(area=str(area or ""), area_kind=area_kind, item_kind=sorted(kinds)[0], code=code)
 
 
 def check(conn, store_code, area, code):
@@ -136,12 +110,7 @@ def master_name(conn, store_code, code):
 
 
 def basis_text(m):
-    k = m["item_kind"]
-    if m["from_master"]:
-        return f"판정 근거: 상품마스터({k})"
-    if k == KIND_BOOK:
-        return "판정 근거: 마스터에 없는 바코드 - 도서/잡지 바코드(978·979·977 또는 ISBN-10)라서 서적으로 판단"
-    return "판정 근거: 마스터에 없는 바코드 - 도서/잡지 바코드(978·979·977)가 아니라서 문구로 판단"
+    return f"판정 근거: 상품마스터({m['item_kind']})"
 
 
 def message(m, name=""):

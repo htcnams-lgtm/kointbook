@@ -87,16 +87,17 @@ class StockInputActivity : BaseActivity() {
 
     /**
      * [2026-10-16] "도서 에리어에서 문구 상품 스캔 및 입력금지 / 문구 에리어에서 도서 상품 스캔 및 입력금지" -
-     * 지금 AREA의 구분(서적/문구)과 이 바코드의 구분(BarcodeKind.judge)이 다르면 저장하지 않고
+     * 지금 AREA의 구분(서적/문구)과 이 바코드의 상품마스터 구분(BarcodeKind.kindOf)이 다르면 저장하지 않고
      * 경고음(진동) + 큰 빨간 경고창을 띄운 뒤 false를 돌려준다. 스캔이든 손으로 친 값이든 같은 검사를 받는다.
-     * AREA가 서적/문구 범위 밖이면(옛 자료 복원 등) 구분할 수 없어 검사하지 않는다.
+     * 마스터에 없는 바코드(미등록)나 구분이 없는 옛 마스터, 서적/문구 범위 밖 AREA는 구분할 수 없어 검사하지 않는다
+     * (미등록은 기존 [미등록상품] 설정이 처리).
      */
     private fun allowedForArea(code: String, info: DbHelper.BookInfo?): Boolean {
         val areaKind = AppState.kindOfArea(AppState.currentArea) ?: return true
-        val verdict = BarcodeKind.judge(info, code)
-        if (verdict.kind == areaKind) return true
+        val itemKind = BarcodeKind.kindOf(info) ?: return true
+        if (itemKind == areaKind) return true
         val block = BarcodeKind.blockText(
-            AppState.currentArea, areaKind, code, info?.bookName ?: "", verdict
+            AppState.currentArea, areaKind, code, info?.bookName ?: "", itemKind
         )
         kindBlockShowing = true
         scanDetector.cancel()
