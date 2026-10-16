@@ -117,7 +117,7 @@ class DataGenerateScreen(tk.Frame):
                               state="readonly", width=8)
         cb_enc.pack(side=tk.LEFT, padx=(8, 8))
         cb_enc.bind("<<ComboboxSelected>>", lambda ev: dbmod.set_setting("stat_encoding", self.var_stat_enc.get()))
-        tk.Label(enc_row, text="CP949 = 한글 윈도우 메모장·엑셀 / UTF-8 = 서버·휴대폰 등 (BOM 없음)",
+        tk.Label(enc_row, text="UTF-8 = 서버·휴대폰 등 (BOM 없음, 기본) / CP949 = 한글 윈도우 메모장·엑셀",
                  bg="white", fg=CL_TEXT_DIM).pack(side=tk.LEFT)
         tk.Frame(fs, bg="white", height=6).pack()
 

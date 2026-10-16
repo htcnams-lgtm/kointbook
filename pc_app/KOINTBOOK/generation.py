@@ -446,14 +446,16 @@ def stat_detail_lines(app, stat_rows=None, stat=None):
     return [",".join([str(v) for v in r[:8]] + [_clean_text(r[8])]) for r in stat_detail_rows(app, stat_rows, stat)]
 
 
-STAT_ENCODINGS = ("CP949", "UTF-8")
+STAT_ENCODINGS = ("UTF-8", "CP949")
 
 
 def stat_encoding():
-    """[2026-10-16] 문구 납품상세 txt의 글자 방식(자료생성 화면에서 고르고 설정 stat_encoding에 기억): CP949(기본, 한글
-    윈도우 메모장·엑셀이 바로 읽음) 또는 UTF-8(BOM 없음, 서버·휴대폰 등 UTF-8로 읽는 곳). 값이 이상하면 CP949."""
-    v = str(dbmod.get_setting("stat_encoding", "CP949") or "").upper().replace("-", "")
-    return "UTF-8" if v == "UTF8" else "CP949"
+    """[2026-10-16] 문구 납품상세 txt의 글자 방식(자료생성 화면에서 고르고 설정 stat_encoding에 기억): UTF-8(기본, BOM 없음,
+    서버·휴대폰 등 UTF-8로 읽는 곳) 또는 CP949(한글 윈도우 메모장·엑셀이 바로 읽음). 값이 없거나 이상하면 UTF-8.
+    [기본값을 바꾼 이유] 어제 CP949로 만든 파일을 받은 쪽이 "깨진 글자가 있다"고 했고(파일 자체는 정상 CP949), 같은 시스템이
+    내려주는 상품마스터·장부마스터 CSV는 모두 UTF-8(BOM)이라 UTF-8을 읽는 쪽일 가능성이 높다."""
+    v = str(dbmod.get_setting("stat_encoding", "UTF-8") or "").upper().replace("-", "")
+    return "CP949" if v in ("CP949", "EUCKR") else "UTF-8"
 
 
 def write_text_lines(lines, path, encoding="cp949"):
