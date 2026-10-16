@@ -16,7 +16,7 @@ kyobo_data2.txt + 인천_결과확인리스트(20251017).xlsx + 인천_서가별
                      (이전 버전은 두 파일의 정의가 서로 바뀌어 있었다 - 받은 샘플 기준으로 바로잡음)
    서가번호(11) = 점포3+AREA2+SECTION3+3자리: PDA에 입력한 서가번호(11~20자리)를 그대로 쓴다
    결과확인리스트.xlsx / 서가별스캔데이터.xlsx (서적 행만)
-  ── 문구 ── (CP949/ASCII 텍스트, CRLF, 헤더 없음)
+  ── 문구 ── (UTF-8 텍스트, CRLF, 헤더 없음)
    납품로케이션데이터 : `위치,바코드,수량` - 위치 = AREA+SECTION(예 101), (위치,바코드)별 수량 합계
    납품상세데이터    : `조사일자,납품처(514),바코드,수량,구분코드(402),단가+종류코드(502)+위치,
                         페이지,줄번호,상품명` - 스캔 1건당 1줄. 구분코드/단가/종류코드는 문구
@@ -446,27 +446,16 @@ def stat_detail_lines(app, stat_rows=None, stat=None):
     return [",".join([str(v) for v in r[:8]] + [_clean_text(r[8])]) for r in stat_detail_rows(app, stat_rows, stat)]
 
 
-STAT_ENCODINGS = ("UTF-8", "CP949")
-
-
-def stat_encoding():
-    """[2026-10-16] 문구 납품상세 txt의 글자 방식(자료생성 화면에서 고르고 설정 stat_encoding에 기억): UTF-8(기본, BOM 없음,
-    서버·휴대폰 등 UTF-8로 읽는 곳) 또는 CP949(한글 윈도우 메모장·엑셀이 바로 읽음). 값이 없거나 이상하면 UTF-8.
-    [기본값을 바꾼 이유] 어제 CP949로 만든 파일을 받은 쪽이 "깨진 글자가 있다"고 했고(파일 자체는 정상 CP949), 같은 시스템이
-    내려주는 상품마스터·장부마스터 CSV는 모두 UTF-8(BOM)이라 UTF-8을 읽는 쪽일 가능성이 높다."""
-    v = str(dbmod.get_setting("stat_encoding", "UTF-8") or "").upper().replace("-", "")
-    return "CP949" if v in ("CP949", "EUCKR") else "UTF-8"
-
-
-def write_text_lines(lines, path, encoding="cp949"):
-    """문구 상세 자료: 한글 윈도우 텍스트(CP949, 기본) 또는 UTF-8, 줄 사이 CRLF, 헤더 없음.
-    표현 못 하는 글자는 ?로 바꾼다. 마지막 줄 뒤 줄바꿈(EOF)은 설정 eof_crlf(기본 켬)에 따른다."""
+def write_text_lines(lines, path):
+    """문구 상세 자료: UTF-8(BOM 없음), 줄 사이 CRLF, 헤더 없음. 마지막 줄 뒤 줄바꿈(EOF)은 eof_crlf_enabled()(항상 켬)에 따른다.
+    [2026-10-16] "이제 모든 txt는 utf-8로 세팅, 선택하는 기능은 없애줘" - 예전의 CP949 고정(10-14 12차)과 글자 선택(1.5.21 초안)을
+    없애고 항상 UTF-8로 쓴다(어제 CP949로 만든 파일을 받은 쪽이 "깨진 글자가 있다"고 했고, 같은 시스템이 내려주는 상품마스터·
+    장부마스터 CSV도 UTF-8(BOM)이다). UTF-8이라 é, ü, 이모지도 ?로 바뀌지 않는다."""
     from pathlib import Path
     path = path if isinstance(path, Path) else Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    enc = "utf-8" if str(encoding).lower().replace("-", "") == "utf8" else "cp949"
     with open(path, "wb") as f:
-        f.write(("\r\n".join(lines) + ("\r\n" if (lines and eof_crlf_enabled()) else "")).encode(enc, errors="replace"))
+        f.write(("\r\n".join(lines) + ("\r\n" if (lines and eof_crlf_enabled()) else "")).encode("utf-8"))
 
 
 def item_list_rows(app, include_zero=False):
@@ -678,11 +667,10 @@ def write_stat_xlsx(path, headers, rows, qty_cols=()):
     fast_xlsx.write_xlsx(path, list(headers), rows, amount_cols=list(qty_cols))
 
 
-def generate_stat_files(app, out_dir, only=None, include_zero=False, encoding=None):
+def generate_stat_files(app, out_dir, only=None, include_zero=False):
     """문구 자료를 쓰고 (파일이름, 줄 수) 리스트를 돌려준다. only = STAT_FILE_KEYS 중 만들 것(None이면 전부):
     loc/det = 납품로케이션·납품상세 txt, loc_x/det_x = 같은 내용의 xlsx, stat_list = 문구 결과확인리스트.xlsx,
-    stat_scan = 문구 로케이션별스캔리스트.xlsx. 문구 스캔이 없으면 빈 리스트.
-    encoding = 납품상세 txt 글자(CP949/UTF-8, 없으면 설정 stat_encoding). 납품로케이션 txt는 숫자/ASCII뿐이라 상관없다."""
+    stat_scan = 문구 로케이션별스캔리스트.xlsx. 문구 스캔이 없으면 빈 리스트. txt는 모두 UTF-8."""
     only = set(STAT_FILE_KEYS if only is None else only)
     _b, stat_rows, stat = split_counts(app)
     if not stat_rows:
@@ -694,7 +682,7 @@ def generate_stat_files(app, out_dir, only=None, include_zero=False, encoding=No
         out.append((stat_location_filename(app), len(lines)))
     if "det" in only:
         lines = stat_detail_lines(app, stat_rows, stat)
-        write_text_lines(lines, out_dir / stat_detail_filename(app), encoding or stat_encoding())
+        write_text_lines(lines, out_dir / stat_detail_filename(app))
         out.append((stat_detail_filename(app), len(lines)))
     if "loc_x" in only:
         rows = stat_location_rows(app, stat_rows)

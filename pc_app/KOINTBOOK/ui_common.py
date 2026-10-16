@@ -1155,7 +1155,8 @@ def eof_crlf_enabled():
 def write_text_lines_file(lines, path, trailing_newline=None):
     """엑셀이 아니라 고정폭 텍스트(예: kyobo_data1.txt/kyobo_data2.txt처럼
     헤더도 구분자도 없는 EDI용 플랫 파일) 그대로 저장할 때 쓴다.
-    [2026-10-13] 받은 샘플은 줄 사이만 CRLF이고 마지막 줄 뒤에는 줄바꿈이 없다 -> 기본값을 그렇게 맞췄다."""
+    [2026-10-13] 받은 샘플은 줄 사이만 CRLF이고 마지막 줄 뒤에는 줄바꿈이 없다 -> 기본값을 그렇게 맞췄다.
+    [2026-10-16] "이제 모든 txt는 utf-8로" - 글자는 UTF-8(BOM 없음)로 쓴다(숫자·영문뿐이라 ASCII와 바이트가 같다)."""
     from pathlib import Path
     if trailing_newline is None:
         trailing_newline = eof_crlf_enabled()
@@ -1163,7 +1164,7 @@ def write_text_lines_file(lines, path, trailing_newline=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     text = "\r\n".join(lines) + ("\r\n" if (trailing_newline and lines) else "")
     with open(path, "wb") as f:
-        f.write(text.encode("ascii"))
+        f.write(text.encode("utf-8"))
 
 
 def short_store_label(store_name):

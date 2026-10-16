@@ -108,17 +108,6 @@ class DataGenerateScreen(tk.Frame):
         self.var_zero_stat = tk.BooleanVar(value=True)
         tk.Checkbutton(fs, text="결과확인리스트에 장부재고·스캔이 모두 0인 품목도 포함", variable=self.var_zero_stat,
                        bg="white", anchor="w", fg=CL_TEXT_DIM).pack(fill=tk.X, padx=(48, 8))
-        # [2026-10-16] 납품상세 txt 글자 선택(상품명에 한글이 있어서 CP949를 못 읽는 곳이 있음). 고른 값은 기억한다.
-        enc_row = tk.Frame(fs, bg="white")
-        enc_row.pack(fill=tk.X, padx=(28, 8), pady=(4, 0))
-        tk.Label(enc_row, text="납품상세 txt 글자", bg="white").pack(side=tk.LEFT)
-        self.var_stat_enc = tk.StringVar(value=generation.stat_encoding())
-        cb_enc = ttk.Combobox(enc_row, textvariable=self.var_stat_enc, values=generation.STAT_ENCODINGS,
-                              state="readonly", width=8)
-        cb_enc.pack(side=tk.LEFT, padx=(8, 8))
-        cb_enc.bind("<<ComboboxSelected>>", lambda ev: dbmod.set_setting("stat_encoding", self.var_stat_enc.get()))
-        tk.Label(enc_row, text="UTF-8 = 서버·휴대폰 등 (BOM 없음, 기본) / CP949 = 한글 윈도우 메모장·엑셀",
-                 bg="white", fg=CL_TEXT_DIM).pack(side=tk.LEFT)
         tk.Frame(fs, bg="white", height=6).pack()
 
         go = tk.Frame(self, bg=CL_BG)
@@ -309,8 +298,7 @@ class DataGenerateScreen(tk.Frame):
                 else:
                     keys = [k for k in generation.STAT_FILE_KEYS if self.var_f[k].get()]
                     for name, n in generation.generate_stat_files(self.app, stat_dir, only=keys,
-                                                                  include_zero=self.var_zero_stat.get(),
-                                                                  encoding=self.var_stat_enc.get()):
+                                                                  include_zero=self.var_zero_stat.get()):
                         done.append(("문구전용/" + name, n))
                     if "det" in keys or "det_x" in keys:
                         miss = generation.missing_stat_master(stat_rows, stat)
