@@ -135,8 +135,19 @@ def _indent_row(row):
     return tuple(row)
 
 
-def _write_diff_detail_workbook(path, rows, headers, progress=None, report_header=None, summary_only=False):
-    """[2026-09-28] "엑셀저장시 엑셀 내용에 맞게 열너비를 타이트하게, 헤더와
+def _write_diff_detail_workbook(path, rows, headers, progress=None, report_header=None, summary_only=False,
+                                title=None, info_center_text=None, row_kinds=None, left_align_cols=_LEFT_INDENT_COL_IDX,
+                                center_align_cols=(2, 3, 4, 5, 6, 10), numeric_cols=None, equal_width_headers=None):
+    """[2026-10-16] "섹션별 아이템 재고현황" 엑셀도 이 재고조사 차이내역 양식(상단 정보 블록 + 페이지
+    머리글/바닥글)을 그대로 쓰도록, 아래 선택 인자를 추가했다. 모두 비워 두면(재고조사 차이내역) 예전과 똑같다.
+      - title: 페이지 머리글 제목(기본 "재고조사 차이내역").
+      - info_center_text: 정보 블록 3행 가운데 칸 글자(기본 "차이수량(±) : 0 이상" 같은 차이수량 조건).
+      - row_kinds: rows와 같은 길이의 목록. None=일반 줄, "sub"=소계(단소계), "sec"=한 단계 큰 소계(섹션소계),
+        "total"=합계. 주면 소계/합계 줄을 열 값으로 추정하지 않고 이 값대로 칠한다.
+      - left_align_cols / center_align_cols / numeric_cols: 왼쪽 정렬(들여쓰기)·가운데 정렬·수량 서식(3자리 콤마) 열 번호(0부터).
+      - equal_width_headers: 너비를 같게 맞출 열 머리글들(기본은 전산재고~비고).
+
+    [2026-09-28] "엑셀저장시 엑셀 내용에 맞게 열너비를 타이트하게, 헤더와
     소계 합계등 프로그램 디자인에 맞게 셀배경색/글씨굵기등 조절, 수량란은
     꼭 세자리 콤마" - 기존 export_rows_to_excel()/print_rows_to_excel()은
     모든 화면이 공용으로 쓰는 "글자만 있는" 단순한 서식(헤더만 굵게, 열
@@ -204,6 +215,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
     from .progress_core import report as _report
 
     total = len(rows)
+    numeric_set = set(numeric_cols) if numeric_cols is not None else _NUMERIC_COL_INDEXES
     _report(progress, message="엑셀 파일을 만드는 중...", done=0, total=total, unit="count")
 
     wb = openpyxl.Workbook()
@@ -226,7 +238,8 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
     # 너비가 동일하게" - 발행 전용으로 이 6칸을 그 중 가장 넓은 폭에
     # 맞춰 통일한다(엑셀저장은 예전처럼 칼럼마다 내용에 맞춘 너비 그대로).
     if report_header:
-        _EQUAL_WIDTH_HEADERS = ("전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")
+        _EQUAL_WIDTH_HEADERS = equal_width_headers or \
+            ("전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")
         _equal_idx = [i for i, h in enumerate(headers) if h in _EQUAL_WIDTH_HEADERS]
         if _equal_idx:
             _equal_w = max(widths[i] for i in _equal_idx)
@@ -376,7 +389,8 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
         # 글자가 굵게 되어 있었다 - 그대로 반영(굵게).
         diff_font = Font(size=info_pt, name="맑은 고딕", bold=True)
         _info_cell(3, left_start, mid_start - 1, f"점포명 : {store_name}")
-        _info_cell(3, mid_start, mid_end, f"차이수량(±) : {diff_disp}", align=align_center, font=diff_font)
+        _info_cell(3, mid_start, mid_end, info_center_text if info_center_text is not None
+                   else f"차이수량(±) : {diff_disp}", align=align_center, font=diff_font)
         _info_cell(3, label_start, label_end, "출력일자 :", align=align_right)
         _info_cell(3, value_start, value_end, printed_at, align=align_left)
 
@@ -388,7 +402,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
         # 셀이 아니라 인쇄될 때 모든 페이지 위/아래에 독립적으로 반복되는
         # 엑셀 고유 영역이라, "페이지 수는 인쇄 시점에 자동 계산"되는
         # &N(총 페이지)/&P(현재 페이지)를 그대로 쓸 수 있다.
-        ws.oddHeader.center.text = "재고조사 차이내역"
+        ws.oddHeader.center.text = title or "재고조사 차이내역"
         ws.oddHeader.center.size = 18
         ws.oddHeader.center.font = "맑은 고딕"  # [2026-09-29] "글씨는 굵기 얇게" - Bold 제거
         ws.oddHeader.right.text = "&P of &N"
@@ -457,6 +471,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
         # 소계/합계/짝수줄 음영 - 회색 톤("모든 칼라 인쇄가 불가하니
         # 회색음영으로").
         subtotal_fill = PatternFill("solid", fgColor="EFEFEF")
+        section_fill = PatternFill("solid", fgColor="E0E0E0")  # 섹션소계(단소계보다 한 단계 진한 회색)
         total_fill = PatternFill("solid", fgColor="D9D9D9")
         odd_fill = PatternFill("solid", fgColor="F7F7F7")
         gold_top = Border(top=Side(style="thin", color="9E9E9E"))
@@ -468,6 +483,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
     else:
         # 소계/합계: 화면(tag_configure)의 골드톤과 맞춘 채우기색(예전 그대로).
         subtotal_fill = PatternFill("solid", fgColor="F3EAD3")   # COLOR_SUBTOTAL_CYAN과 동일
+        section_fill = subtotal_fill
         total_fill = PatternFill("solid", fgColor="E8D9B0")      # COLOR_SUBTOTAL_GREEN과 동일
         odd_fill = PatternFill("solid", fgColor="F6F7F9")        # 표의 "odd" 줄무늬와 동일
         gold_top = Border(top=Side(style="thin", color="B08D3E"))
@@ -500,7 +516,8 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
             _report(progress, done=data_row_i)
             progress.check_cancel()  # [취소] 눌렀으면 여기서 Cancelled 예외로 중단
         excel_row = [ws.cell(row=excel_row_num, column=c) for c in range(1, len(row) + 1)]
-        is_total = row[0] == "합  계"
+        kind = row_kinds[data_row_i - 1] if row_kinds is not None else None
+        is_total = (kind == "total") if row_kinds is not None else row[0] == "합  계"
         # [2026-09-28] 소계 줄의 첫 칸이 이제 "소  계" 고정 문구가 아니라
         # [합계조회] 모드에서는 도서명으로 바뀔 수 있어(요청: "합계조회만
         # 눌렀을땐 소계대신 바코드에 맞는 도서명을 보여줘"), 문구로 판별할
@@ -513,9 +530,12 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
         # 그러면 위 판별식으로는 "전부 다" 소계로 인식돼 모든 줄에 소계
         # 음영/아랫선이 그대로 붙어버렸다. summary_only일 때는 합계 줄만
         # 강조하고 소계 음영/선은 아예 적용하지 않는다.
-        is_subtotal = (not summary_only) and (not is_total) and all(
-            row[i] != "" and row[i] is not None for i in (7, 8, 9)
-        )
+        if row_kinds is not None:
+            is_subtotal = kind in ("sub", "sec")
+        else:
+            is_subtotal = (not summary_only) and (not is_total) and all(
+                row[i] != "" and row[i] is not None for i in (7, 8, 9)
+            )
         for col_i, cell in enumerate(excel_row):
             if data_font is not None:
                 cell.font = data_font
@@ -527,7 +547,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
                 cell.border = Border(left=data_vborder.left, right=data_vborder.right,
                                       top=navy_top.top) if data_vborder else navy_top
             elif is_subtotal:
-                cell.fill = subtotal_fill
+                cell.fill = section_fill if kind == "sec" else subtotal_fill
                 cell.font = bold_font
                 # [2026-09-29] "소계 줄 윗면에 선이 아직도 그어져있어, 아랫면에
                 # 선을 그어주고" - 화면(Treeview)은 이미 옵션 A(아랫선만)로
@@ -538,13 +558,15 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
                                       bottom=gold_top.top) if data_vborder else Border(bottom=gold_top.top)
             elif data_row_i % 2 == 0:
                 cell.fill = odd_fill
-            if report_header and col_i in (0, 1):
+            if report_header and col_i in left_align_cols:
                 # [2026-09-29] "도서명, 바코드 항목 내용은 왼쪽정렬후
                 # 들여쓰기 한칸" (발행 전용 - 엑셀저장은 기존 기본 정렬 그대로).
                 cell.alignment = Alignment(horizontal="left", vertical="center", indent=1)
-            if col_i in (2, 3, 4, 5, 6, 10):  # AREA/SECTION/단/열/서가번호/예외여부 - 짧은 코드값은 가운데 정렬
-                cell.alignment = code_center
-            if col_i in _NUMERIC_COL_INDEXES:
+            if col_i in center_align_cols:  # AREA/SECTION/단/열/서가번호/예외여부 - 짧은 코드값은 가운데 정렬
+                # [2026-10-16] 섹션별 아이템 재고현황(row_kinds를 넘기는 경우)은 같은 줄의 글자 높이가 어긋나 보이지
+                # 않도록 세로도 가운데로 맞춘다(재고조사 차이내역은 예전 그대로).
+                cell.alignment = Alignment(horizontal="center", vertical="center") if row_kinds is not None else code_center
+            if col_i in numeric_set:
                 value = row[col_i]
                 if isinstance(value, (int, float)):
                     cell.number_format = "#,##0"  # [요청] 수량란은 꼭 3자리 콤마

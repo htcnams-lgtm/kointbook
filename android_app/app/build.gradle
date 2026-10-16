@@ -19,8 +19,8 @@ android {
         applicationId "com.kointbook.app"
         minSdk 21
         targetSdk 34
-        versionCode 34
-        versionName "1.5.19"
+        versionCode 35
+        versionName "1.5.20"
     }
 
     // [2026-10-15] 빌드마다 서명이 달라 "서명이 달라 덮어쓸 수 없다" 팝업이 새 버전 첫 설치 때마다 뜨던 문제:
