@@ -446,6 +446,16 @@ def stat_detail_lines(app, stat_rows=None, stat=None):
     return [",".join([str(v) for v in r[:8]] + [_clean_text(r[8])]) for r in stat_detail_rows(app, stat_rows, stat)]
 
 
+STAT_ENCODINGS = ("CP949", "UTF-8")
+
+
+def stat_encoding():
+    """[2026-10-16] 문구 납품상세 txt의 글자 방식(자료생성 화면에서 고르고 설정 stat_encoding에 기억): CP949(기본, 한글
+    윈도우 메모장·엑셀이 바로 읽음) 또는 UTF-8(BOM 없음, 서버·휴대폰 등 UTF-8로 읽는 곳). 값이 이상하면 CP949."""
+    v = str(dbmod.get_setting("stat_encoding", "CP949") or "").upper().replace("-", "")
+    return "UTF-8" if v == "UTF8" else "CP949"
+
+
 def write_text_lines(lines, path, encoding="cp949"):
     """문구 상세 자료: 한글 윈도우 텍스트(CP949, 기본) 또는 UTF-8, 줄 사이 CRLF, 헤더 없음.
     표현 못 하는 글자는 ?로 바꾼다. 마지막 줄 뒤 줄바꿈(EOF)은 설정 eof_crlf(기본 켬)에 따른다."""
@@ -666,10 +676,11 @@ def write_stat_xlsx(path, headers, rows, qty_cols=()):
     fast_xlsx.write_xlsx(path, list(headers), rows, amount_cols=list(qty_cols))
 
 
-def generate_stat_files(app, out_dir, only=None, include_zero=False):
+def generate_stat_files(app, out_dir, only=None, include_zero=False, encoding=None):
     """문구 자료를 쓰고 (파일이름, 줄 수) 리스트를 돌려준다. only = STAT_FILE_KEYS 중 만들 것(None이면 전부):
     loc/det = 납품로케이션·납품상세 txt, loc_x/det_x = 같은 내용의 xlsx, stat_list = 문구 결과확인리스트.xlsx,
-    stat_scan = 문구 로케이션별스캔리스트.xlsx. 문구 스캔이 없으면 빈 리스트."""
+    stat_scan = 문구 로케이션별스캔리스트.xlsx. 문구 스캔이 없으면 빈 리스트.
+    encoding = 납품상세 txt 글자(CP949/UTF-8, 없으면 설정 stat_encoding). 납품로케이션 txt는 숫자/ASCII뿐이라 상관없다."""
     only = set(STAT_FILE_KEYS if only is None else only)
     _b, stat_rows, stat = split_counts(app)
     if not stat_rows:
@@ -681,7 +692,7 @@ def generate_stat_files(app, out_dir, only=None, include_zero=False):
         out.append((stat_location_filename(app), len(lines)))
     if "det" in only:
         lines = stat_detail_lines(app, stat_rows, stat)
-        write_text_lines(lines, out_dir / stat_detail_filename(app), "cp949")
+        write_text_lines(lines, out_dir / stat_detail_filename(app), encoding or stat_encoding())
         out.append((stat_detail_filename(app), len(lines)))
     if "loc_x" in only:
         rows = stat_location_rows(app, stat_rows)
