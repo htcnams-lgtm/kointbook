@@ -339,13 +339,19 @@ def shelf_code(r, store_code):
     return (_digits_only(store_code, 3) + normalize_area(r["area"], merged=True) + sec + digits[-3:].zfill(3))[:11]
 
 
+def nonzero_rows(rows):
+    """[2026-10-16] 실사수량 0인 스캔 줄은 txt(kyobo_data1·2, 납품로케이션·상세)와 스캔리스트(서가별스캔데이터,
+    로케이션별스캔리스트)에서 뺀다. 결과확인리스트는 이 함수를 쓰지 않고 그대로 둔다(사용자 지시)."""
+    return [r for r in rows if (r["qty"] or 0) != 0]
+
+
 def kyobo_data1_lines(app, rows=None):
     """자료① (kyobo_data1.txt): 서가번호(11자리, 입력이 11자리를 넘으면 그 자리수 그대로 최대 20)+바코드(13), (서가번호,바코드)당 1줄, 정렬."""
     if rows is None:
         rows = split_counts(app)[0]
     store_code = app.state.store_code
     pairs = set()
-    for r in rows:
+    for r in nonzero_rows(rows):
         isbn = str(r["isbn"] or "").strip()
         if not isbn:
             continue
@@ -358,13 +364,13 @@ def kyobo_data2_lines(app, rows=None):
     if rows is None:
         rows = split_counts(app)[0]
     totals = {}
-    for r in rows:
+    for r in nonzero_rows(rows):
         isbn = str(r["isbn"] or "").strip()
         if not isbn:
             continue
         k = isbn.rjust(13, "0")[-13:]
         totals[k] = totals.get(k, 0) + (r["qty"] or 0)
-    return [f"{k}{min(max(q, 0), 99999):05d}" for k, q in sorted(totals.items())]
+    return [f"{k}{min(max(q, 0), 99999):05d}" for k, q in sorted(totals.items()) if q != 0]
 
 
 # ---- 문구 납품 자료 -----------------------------------------------------------------------
@@ -390,13 +396,13 @@ def stat_location_rows(app, stat_rows=None):
     if stat_rows is None:
         stat_rows = split_counts(app)[1]
     tot = {}
-    for r in stat_rows:
+    for r in nonzero_rows(stat_rows):
         isbn = str(r["isbn"] or "").strip()
         if not isbn:
             continue
         k = (stat_location(r["area"], r["section"]), bc13(isbn))
         tot[k] = tot.get(k, 0) + (r["qty"] or 0)
-    return [(loc, isbn, q) for (loc, isbn), q in sorted(tot.items(), key=lambda kv: (_loc_sort_key(kv[0][0]), kv[0][1]))]
+    return [(loc, isbn, q) for (loc, isbn), q in sorted(tot.items(), key=lambda kv: (_loc_sort_key(kv[0][0]), kv[0][1])) if q != 0]
 
 
 def stat_location_lines(app, stat_rows=None):
@@ -416,7 +422,7 @@ def stat_detail_rows(app, stat_rows=None, stat=None):
         _b, stat_rows, stat = split_counts(app)
     date = file_date(app)
     by_loc = {}
-    for r in stat_rows:
+    for r in nonzero_rows(stat_rows):  # 수량 0 줄은 빼고 페이지·줄번호를 매긴다(번호가 비지 않게)
         isbn = str(r["isbn"] or "").strip()
         if not isbn:
             continue
@@ -521,7 +527,7 @@ def shelf_rows(app):
     컬럼: 바코드,도서명,분야,출판사,서가번호,실사수량."""
     store_code = app.state.store_code
     books_map = {bc13(k): v for k, v in _fetch_books_map(store_code).items()}
-    rows = split_counts(app)[0]  # 서적 행만
+    rows = nonzero_rows(split_counts(app)[0])  # 서적 행만, 실사수량 0 줄 제외
     data = []
     for r in sorted(rows, key=lambda x: (bc13(x["isbn"]), shelf_code(x, store_code))):
         isbn = str(r["isbn"] or "").strip()
@@ -600,7 +606,7 @@ def stat_scan_rows(app, stat_rows=None):
     if stat_rows is None:
         stat_rows = split_counts(app)[1]
     tot, first = {}, {}
-    for r in stat_rows:
+    for r in nonzero_rows(stat_rows):
         isbn = str(r["isbn"] or "").strip()
         if not isbn:
             continue
@@ -608,7 +614,7 @@ def stat_scan_rows(app, stat_rows=None):
         tot[key] = tot.get(key, 0) + (r["qty"] or 0)
         first.setdefault(key, r)
     data = []
-    for key in sorted(tot, key=lambda k: (k[0], _loc_sort_key(k[1]))):
+    for key in sorted((k for k in tot if tot[k] != 0), key=lambda k: (k[0], _loc_sort_key(k[1]))):
         k, loc = key
         b, nm = ledger.get(k), names.get(k)
         name = (nm["book_name"] if nm is not None and nm["book_name"] else None) or (b["book_name"] if b is not None else "") \
