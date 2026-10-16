@@ -579,8 +579,10 @@ def shelf_rows(app):
 # [2026-10-16] 서적 결과확인리스트·서가별스캔데이터와 같은 모양의 문구판. 기준 마스터가 서적 쪽(장부 서적 행)이
 # 아니라 문구 장부마스터(ledger_master.kind='문구')와 문구 스캔 행(AREA 20~29·80~89)이다.
 # 문구는 실재고·누락재고·예외여부를 쓰지 않으므로 F·G·H열은 제목도 값도 고정 "X".
-STAT_ITEM_LIST_HEADERS = ("바코드", "도서명", "분야", "출판사", "전산재고", "X", "X", "X", "스캔재고", "차이")
-STAT_SCAN_HEADERS = ("바코드", "도서명", "분야", "출판사", "로케이션", "실사수량")
+# 항목 제목은 사용자가 준 실제 문구 파일(수원 결과확인리스트·로케이션별 스캔리스트, 2026-10-15)과 똑같이 맞췄다:
+# 서적과 달리 상품명 / 상품구분 / 매입처 / 장부재고, 로케이션별은 분야 / 거래처 / 스캔총수량.
+STAT_ITEM_LIST_HEADERS = ("바코드", "상품명", "상품구분", "매입처", "장부재고", "X", "X", "X", "스캔재고", "차이")
+STAT_SCAN_HEADERS = ("바코드", "상품명", "분야", "거래처", "로케이션", "스캔총수량")
 
 
 def _stat_ledger_map(store_code):
@@ -594,9 +596,9 @@ def _stat_names_map(store_code):
 
 
 def stat_item_list_rows(app, include_zero=False, stat_rows=None):
-    """문구 결과확인리스트: 문구 장부마스터 전 품목 + 이번 조사의 문구 스캔재고/차이(차이 = 스캔재고 - 전산재고).
-    컬럼: 바코드,도서명,분야,출판사,전산재고,X,X,X,스캔재고,차이 (F·G·H는 제목·값 모두 "X").
-    include_zero=False면 전산재고와 스캔재고가 모두 0인 품목은 뺀다. 전산재고 칸이 마스터에서 X면 X로 보이고 차이 계산엔 0."""
+    """문구 결과확인리스트: 문구 장부마스터 전 품목 + 이번 조사의 문구 스캔재고/차이(차이 = 스캔재고 - 장부재고).
+    컬럼: 바코드,상품명,상품구분,매입처,장부재고,X,X,X,스캔재고,차이 (F·G·H는 제목·값 모두 "X").
+    include_zero=False면 장부재고와 스캔재고가 모두 0인 품목은 뺀다. 장부재고 칸이 마스터에서 X면 X로 보이고 차이 계산엔 0."""
     store_code = app.state.store_code
     ledger = _stat_ledger_map(store_code)
     names = _stat_names_map(store_code)
@@ -628,24 +630,29 @@ def stat_item_list_rows(app, include_zero=False, stat_rows=None):
 
 
 def stat_scan_rows(app, stat_rows=None):
-    """문구 로케이션별 스캔리스트: 스캔 1건당 1행(서가별스캔데이터의 문구판). 서가번호 대신 로케이션(AREA 2자리 + SECTION 3자리).
-    컬럼: 바코드,도서명,분야,출판사,로케이션,실사수량."""
+    """문구 로케이션별 스캔리스트: (바코드, 로케이션)마다 1행, 스캔총수량은 그 합계(사용자가 준 실제 파일과 같은 방식).
+    로케이션 = AREA 2자리 + SECTION 3자리. 컬럼: 바코드,상품명,분야,거래처,로케이션,스캔총수량. 바코드순 → 로케이션순."""
     store_code = app.state.store_code
     ledger = _stat_ledger_map(store_code)
     names = _stat_names_map(store_code)
     if stat_rows is None:
         stat_rows = split_counts(app)[1]
-    data = []
-    for r in sorted(stat_rows, key=lambda x: (bc13(x["isbn"]), _loc_sort_key(stat_location(x["area"], x["section"])), x["id"])):
+    tot, first = {}, {}
+    for r in stat_rows:
         isbn = str(r["isbn"] or "").strip()
         if not isbn:
             continue
-        k = bc13(isbn)
+        key = (bc13(isbn), stat_location(r["area"], r["section"]))
+        tot[key] = tot.get(key, 0) + (r["qty"] or 0)
+        first.setdefault(key, r)
+    data = []
+    for key in sorted(tot, key=lambda k: (k[0], _loc_sort_key(k[1]))):
+        k, loc = key
         b, nm = ledger.get(k), names.get(k)
         name = (nm["book_name"] if nm is not None and nm["book_name"] else None) or (b["book_name"] if b is not None else "") \
-            or (r["book_name"] or "")
+            or (first[key]["book_name"] or "")
         data.append((k, name, (b["category"] if b is not None else "") or "", (b["publisher"] if b is not None else "") or "",
-                     stat_location(r["area"], r["section"]), r["qty"] or 0))
+                     loc, tot[key]))
     return STAT_SCAN_HEADERS, data
 
 

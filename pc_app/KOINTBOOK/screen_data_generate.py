@@ -102,11 +102,11 @@ class DataGenerateScreen(tk.Frame):
                           ("det", "납품상세데이터.txt  (날짜,납품처,바코드,수량,구분,단가+종류+위치,페이지,줄,상품명)"),
                           ("loc_x", "납품로케이션데이터.xlsx  (txt와 같은 내용)"),
                           ("det_x", "납품상세데이터.xlsx  (txt와 같은 내용)"),
-                          ("stat_list", "결과확인리스트.xlsx  (문구 장부 전산재고 / X·X·X / 스캔재고 / 차이)"),
-                          ("stat_scan", "로케이션별스캔리스트.xlsx  (스캔 1건당 1줄, 로케이션 = AREA+SECTION)")):
+                          ("stat_list", "결과확인리스트.xlsx  (문구 장부재고 / X·X·X / 스캔재고 / 차이)"),
+                          ("stat_scan", "로케이션별스캔리스트.xlsx  (바코드+로케이션별 스캔총수량)")):
             tk.Checkbutton(fs, text=text, variable=self.var_f[key], bg="white", anchor="w").pack(fill=tk.X, padx=(28, 8))
         self.var_zero_stat = tk.BooleanVar(value=True)
-        tk.Checkbutton(fs, text="결과확인리스트에 전산재고·스캔이 모두 0인 품목도 포함", variable=self.var_zero_stat,
+        tk.Checkbutton(fs, text="결과확인리스트에 장부재고·스캔이 모두 0인 품목도 포함", variable=self.var_zero_stat,
                        bg="white", anchor="w", fg=CL_TEXT_DIM).pack(fill=tk.X, padx=(48, 8))
         tk.Frame(fs, bg="white", height=6).pack()
 
