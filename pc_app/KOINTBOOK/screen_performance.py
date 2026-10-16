@@ -1073,8 +1073,9 @@ class PerformanceScreen(tk.Frame):
         돌려준다 - "이미 쓰던 에리어/섹션이 아니라서" 자동배정할 작업자가
         없을 때, 이 중에서 고르게 한다."""
         conn = dbmod.get_conn()
-        rows = conn.execute("SELECT worker_code, worker_name FROM workers ORDER BY worker_code").fetchall()
+        rows = conn.execute("SELECT worker_code, worker_name FROM workers").fetchall()
         conn.close()
+        rows.sort(key=lambda r: dbmod.worker_code_sort_key(r["worker_code"]))   # 숫자 크기순(1, 2, 10)
         return [(r["worker_code"], r["worker_name"]) for r in rows]
 
     def open_register_popup(self, parent=None):

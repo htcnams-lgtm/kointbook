@@ -439,7 +439,7 @@ class StockInputActivity : BaseActivity() {
                 val code = s.toString().trim()
                 if (code.isEmpty()) { tvBookName.text = ""; return }
                 val info = db.findBook(AppState.storeCode, code)
-                tvBookName.text = if (info == null) "(미등록 도서 - 그대로 등록 가능)" else {
+                tvBookName.text = if (info == null) "(미등록 ${itemWord()} - 그대로 등록 가능)" else {
                     val cat = if (info.category.isNotEmpty()) "  [${info.category}]" else ""
                     "${info.bookName}$cat"
                 }
@@ -479,6 +479,12 @@ class StockInputActivity : BaseActivity() {
         try { unregisterReceiver(scanReceiver) } catch (_: Exception) {}
     }
 
+    /**
+     * [2026-10-16] "pda 미등록 메세지 문구는 도서가 아니라 문구로" - 미등록 안내(입력칸 아래 글, 차단 팝업, 확인 팝업)에
+     * 문구 AREA에서는 '도서' 대신 '문구'를 쓴다. 서적 AREA와 서적/문구 범위 밖 AREA는 예전처럼 '도서'.
+     */
+    private fun itemWord(): String = if (AppState.isStationery) "문구" else "도서"
+
     /** ISBN이 스캔/입력으로 확정되었을 때 공통 처리 */
     private fun onIsbnConfirmed(isbn: String) {
         if (kindBlockShowing) return
@@ -496,7 +502,8 @@ class StockInputActivity : BaseActivity() {
             proceedIsbn(isbn)
         } else if (hasMaster && info == null && unregPolicy == "block") {
             SoundUtil.warningBeep(this)
-            Dialogs.info(this, "미등록 도서", "도서마스터에 없는 도서는 입력할 수 없습니다.\n(PC 설정: 차단)")
+            val w = itemWord()
+            Dialogs.info(this, "미등록 $w", "${w}마스터에 없는 ${w}는 입력할 수 없습니다.\n(PC 설정: 차단)")
             etIsbn.setText("")
             etIsbn.requestFocus()
         } else if (hasMaster && info == null) {
@@ -504,7 +511,7 @@ class StockInputActivity : BaseActivity() {
             Dialogs.confirm(
                 activity = this,
                 title = "확인",
-                message = "도서마스터에 없는 미등록도서 입니다.\n입력하시겠습니까?",
+                message = "${itemWord()}마스터에 없는 미등록${itemWord()} 입니다.\n입력하시겠습니까?",
                 positiveText = "예",
                 negativeText = "아니오",
                 focusPositive = false, // 기본값 '아니오'

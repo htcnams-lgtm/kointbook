@@ -103,6 +103,13 @@ _data_version = 0
 _data_version_lock = threading.Lock()
 
 
+def worker_code_sort_key(code):
+    """[2026-10-16] "작업자코드로 정렬 숫자가 뒤죽박죽" - 작업자코드는 글자로 저장돼 있어 ORDER BY로 정렬하면
+    1, 10, 11, 2, 3 순이 된다. 숫자 코드는 크기순(1, 2, 3, 10, 11), 숫자가 아닌 코드는 그 뒤에 글자순."""
+    c = str(code or "").strip()
+    return (0, int(c), c) if c.isdigit() else (1, 0, c)
+
+
 def data_version():
     return _data_version
 
