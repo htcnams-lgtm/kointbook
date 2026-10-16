@@ -402,7 +402,9 @@ class KointBookPcApp:
                       and getattr(frame, "_show_key", None) == key + (dbmod.data_version(),))
             if not cached:
                 try:
-                    frame.refresh()
+                    # [2026-10-16] 열리는 데 오래 걸리는 조회 화면(섹션별 아이템 재고현황, 재고조사 차이내역)은 들어올 때 자동으로
+                    # 조회하지 않고 빈 화면으로 둔다(clear_view). [조회]를 눌러야 조회된다. 나머지 화면은 예전처럼 refresh.
+                    (getattr(frame, "clear_view", None) or frame.refresh)()
                 except Exception:
                     pass
                 frame._show_key = key + (dbmod.data_version(),)

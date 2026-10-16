@@ -13,6 +13,8 @@ from .virtual_table import VirtualList, IdListModel
 from . import generation
 from . import scope
 from .scope_ui import ScopeBar
+from .progress_core import Cancelled
+from .progress_dialog import run_with_progress
 from .ui_common import setup_treeview, export_rows_to_excel, write_rows_to_excel_file, file_date, \
     CL_BG, CL_NAVY, CL_TEXT_DIM, win_button, split_scan_datetime
 
@@ -262,73 +264,49 @@ class DataGenerateScreen(tk.Frame):
         messagebox.showinfo("완료", f"{label} 파일이 생성되었습니다:\n{out_path}")
 
     def generate_selected(self):
-        """체크한 서적/문구 자료를 한 번에 만든다."""
-        if not (self.var_do_book.get() or self.var_do_stat.get()):
+        """체크한 서적/문구 자료를 한 번에 만든다.
+        [2026-10-16] "서적자료, 문구자료 동시 생성시 시간이 걸리니 진행률을 보여줄수있나" - 만드는 일은 백그라운드로
+        돌리고 진행률 팝업(몇 번째 파일, 지금 만드는 파일 이름, 경과 시간)을 보여 준다. [취소]하면 다음 파일부터
+        멈추고 이미 만든 파일은 폴더에 남는다."""
+        do_book, do_stat = self.var_do_book.get(), self.var_do_stat.get()
+        if not (do_book or do_stat):
             messagebox.showinfo("알림", "생성할 구분(서적/문구)을 체크하세요.")
             return
         out_dir = generation.output_dir(self.app)
-        book_dir = generation.output_dir(self.app, "서적")
-        stat_dir = generation.output_dir(self.app, "문구")
-        done, skipped = [], []
-        try:
-            book_rows, stat_rows, stat = generation.split_counts(self.app)
-            if self.var_do_book.get():
-                if not book_rows:
-                    skipped.append("서적: 서적 실사 자료가 없습니다")
-                else:
-                    from .ui_common import write_text_lines_file
-                    if self.var_f["d1"].get():
-                        lines = generation.kyobo_data1_lines(self.app, book_rows)
-                        write_text_lines_file(lines, book_dir / "kyobo_data1.txt")
-                        done.append(("서적전용/kyobo_data1.txt", len(lines)))
-                    if self.var_f["d2"].get():
-                        lines = generation.kyobo_data2_lines(self.app, book_rows)
-                        write_text_lines_file(lines, book_dir / "kyobo_data2.txt")
-                        done.append(("서적전용/kyobo_data2.txt", len(lines)))
-                    if self.var_f["list"].get():
-                        headers, rows = generation.item_list_rows(self.app, include_zero=self.var_zero.get())
-                        write_rows_to_excel_file(rows, headers, book_dir / generation.item_list_filename(self.app, "서적"))
-                        done.append(("서적전용/" + generation.item_list_filename(self.app, "서적"), len(rows)))
-                    if self.var_f["shelf"].get():
-                        headers, rows = generation.shelf_rows(self.app)
-                        write_rows_to_excel_file(rows, headers, book_dir / generation.shelf_filename(self.app, "서적"))
-                        done.append(("서적전용/" + generation.shelf_filename(self.app, "서적"), len(rows)))
-                    if self.var_f["shelf_sum"].get():
-                        headers, rows = generation.shelf_sum_rows(self.app)
-                        write_rows_to_excel_file(rows, headers, book_dir / generation.shelf_sum_filename(self.app, "서적"))
-                        done.append(("서적전용/" + generation.shelf_sum_filename(self.app, "서적"), len(rows)))
-            if self.var_do_stat.get():
-                if not stat_rows:
-                    skipped.append("문구: 문구 실사 자료가 없습니다")
-                else:
-                    keys = [k for k in generation.STAT_FILE_KEYS if self.var_f[k].get()]
-                    for name, n in generation.generate_stat_files(self.app, stat_dir, only=keys,
-                                                                  include_zero=self.var_zero_stat.get()):
-                        done.append(("문구전용/" + name, n))
-                    if "det" in keys or "det_x" in keys:
-                        miss = generation.missing_stat_master(stat_rows, stat)
-                        if miss:
-                            skipped.append(f"참고: 문구 범위의 바코드 {miss:,}종이 문구 상품마스터에 없어 단가·구분코드·납품처가 비어 있습니다")
-        except ImportError:
-            messagebox.showerror("오류", "엑셀 생성을 위해 openpyxl이 필요합니다.\npip install openpyxl")
-            return
-        except Exception as e:  # noqa: BLE001
-            messagebox.showerror("오류", f"자료 생성 중 오류: {e}")
-            return
-        msg = []
-        if done:
-            msg.append(f"저장 위치: {out_dir}  (서적전용 / 문구전용 폴더)\n")
-            msg += [f"  {name}  ({n:,}건)" for name, n in done]
-        if skipped:
-            msg.append("\n확인할 항목")
-            msg += [f"  {t}" for t in skipped]
-        if not done and not skipped:
-            msg.append("선택된 파일이 없습니다.")
-        if done:
-            if messagebox.askyesno("생성 완료", "\n".join(msg) + "\n\n폴더를 열까요?"):
-                self.open_folder()
-        else:
-            messagebox.showinfo("알림", "\n".join(msg))
+        files = {k: v.get() for k, v in self.var_f.items()}   # tkinter 값은 여기(화면 스레드)에서 미리 읽어 둔다
+        zero_book, zero_stat = self.var_zero.get(), self.var_zero_stat.get()
+
+        def work(progress):
+            return generation.generate_selected(self.app, do_book, do_stat, files, zero_book=zero_book,
+                                                zero_stat=zero_stat, progress=progress)
+
+        def finished(result, error):
+            if isinstance(error, Cancelled):
+                messagebox.showinfo("알림", "자료 생성을 취소했습니다. 취소하기 전에 만든 파일은 폴더에 남아 있습니다:\n" + str(out_dir))
+                return
+            if isinstance(error, ImportError):
+                messagebox.showerror("오류", "엑셀 생성을 위해 openpyxl이 필요합니다.\npip install openpyxl")
+                return
+            if error is not None:
+                messagebox.showerror("오류", f"자료 생성 중 오류: {error}")
+                return
+            done, skipped = result
+            msg = []
+            if done:
+                msg.append(f"저장 위치: {out_dir}  (서적전용 / 문구전용 폴더)\n")
+                msg += [f"  {name}  ({n:,}건)" for name, n in done]
+            if skipped:
+                msg.append("\n확인할 항목")
+                msg += [f"  {t}" for t in skipped]
+            if not done and not skipped:
+                msg.append("선택된 파일이 없습니다.")
+            if done:
+                if messagebox.askyesno("생성 완료", "\n".join(msg) + "\n\n폴더를 열까요?"):
+                    self.open_folder()
+            else:
+                messagebox.showinfo("알림", "\n".join(msg))
+
+        run_with_progress(self, "자료 생성", work, finished, cancelable=True, initial_message="실사 자료를 불러오는 중...")
 
     def generate_unregistered(self):
         kind = self.bar.kind()

@@ -630,8 +630,27 @@ class DiffDetailScreen(tk.Frame):
         self._grand = (0, 0, 0, 0, 0)  # (전산재고,실재고,누락재고,실사수량,차이수량) 전체 합
         self._view_page = 0
         self._view_total_pages = 1
+        # [2026-10-16] "섹션별 아이템 현황과 재고조사 차이내역은 화면뜨기까지 시간이 걸리니 최초화면은 빈화면, 조회누르면
+        # 전체 조회" - 들어올 때 자동으로 조회하지 않고 빈 화면으로 둔다. [조회]/[합계조회]/Enter로 조회한 뒤에는
+        # 조회기준·AREA 합산·구분을 바꾸면 예전처럼 바로 다시 조회한다(_queried).
+        self._queried = False
         self._build_ui()
-        self.refresh()
+        self.clear_view()
+
+    def clear_view(self):
+        """빈 화면으로 되돌린다(처음 열 때, 그리고 들어올 때 데이터가 바뀌어 지난 조회 결과가 맞지 않을 때)."""
+        self._queried = False
+        self._summary_only = False
+        self._groups = []
+        self._grand = (0, 0, 0, 0, 0)
+        self._view_total_pages = 1
+        self._load_page(0)
+        self.lbl_total.config(text="(조회 버튼을 누르면 조회됩니다)")
+
+    def auto_refresh(self):
+        """조회기준·AREA 합산전/후·구분을 바꿨을 때: 이미 조회한 적이 있을 때만 바로 다시 조회한다."""
+        if self._queried:
+            self.refresh(summary_only=False)
 
     def _build_ui(self):
         top = tk.Frame(self, bg=CL_BG)
@@ -680,9 +699,9 @@ class DiffDetailScreen(tk.Frame):
 
         self.merge_mode = tk.StringVar(value="합산전")
         tk.Radiobutton(top, text="AREA 합산전", variable=self.merge_mode, value="합산전", bg=CL_BG,
-                       command=lambda: self.refresh(summary_only=False)).pack(side=tk.LEFT, padx=(20, 0))
+                       command=self.auto_refresh).pack(side=tk.LEFT, padx=(20, 0))
         tk.Radiobutton(top, text="AREA 합산후", variable=self.merge_mode, value="합산후", bg=CL_BG,
-                       command=lambda: self.refresh(summary_only=False)).pack(side=tk.LEFT)
+                       command=self.auto_refresh).pack(side=tk.LEFT)
         tk.Label(actions, text="차이수량(±)", bg=CL_BG).pack(side=tk.LEFT, padx=(0, 4))
         self.e_diff = tk.Entry(actions, width=10)
         self.e_diff.pack(side=tk.LEFT)
@@ -697,7 +716,7 @@ class DiffDetailScreen(tk.Frame):
         tk.Radiobutton(actions, text="실사-실재고", variable=self.diff_basis, value="real",
                        bg=CL_BG).pack(side=tk.LEFT, padx=(0, 0))
         # [2026-10-13] 서적/문구 구분(AREA·SECTION 범위). 구분을 바꾸면 바로 다시 조회한다.
-        self.bar = ScopeBar(actions, on_change=lambda: self.refresh(summary_only=False))
+        self.bar = ScopeBar(actions, on_change=self.auto_refresh)
         self.bar.pack(side=tk.LEFT, padx=(14, 0))
         win_button(actions, text="조회", command=lambda: self.refresh(summary_only=False),
                    kind="normal").pack(side=tk.LEFT, padx=8)
@@ -796,7 +815,7 @@ class DiffDetailScreen(tk.Frame):
             else:
                 self.e_filter.pack(side=tk.LEFT)
         if not initial:
-            self.refresh(summary_only=False)
+            self.auto_refresh()
 
     def _ktag(self):
         t = self.bar.tag()
@@ -1008,6 +1027,7 @@ class DiffDetailScreen(tk.Frame):
         self._grand = (grand_ledger, grand_real, grand_missing, grand_scanned, grand_diff)
         self._view_total_pages = max(1, (len(groups) + GROUP_PAGE_SIZE - 1) // GROUP_PAGE_SIZE)
         self._load_page(0)
+        self._queried = True
 
     def _build_full_rows(self):
         """엑셀저장/발행용 - 지금 조회된 전체(페이지 제한 없이)를 지금
@@ -1085,7 +1105,7 @@ class DiffDetailScreen(tk.Frame):
     def export_excel(self):
         rows = self._build_full_rows()
         if not rows:
-            messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
+            messagebox.showinfo("알림", "저장할 데이터가 없습니다." if self._queried else "저장할 데이터가 없습니다. 먼저 [조회]를 누르세요.")
             return
         headers = ("도서명", "바코드", "AREA", "SECTION", "단", "열", "서가번호",
                   "전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")
@@ -1166,7 +1186,7 @@ class DiffDetailScreen(tk.Frame):
         싶을 때 사용)."""
         rows = self._build_full_rows()
         if not rows:
-            messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
+            messagebox.showinfo("알림", "저장할 데이터가 없습니다." if self._queried else "저장할 데이터가 없습니다. 먼저 [조회]를 누르세요.")
             return
         headers = ("도서명", "바코드", "AREA", "SECTION", "단", "열", "서가번호",
                   "전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")
@@ -1233,7 +1253,7 @@ class DiffDetailScreen(tk.Frame):
         그대로 써서 인쇄물도 화면/엑셀저장과 똑같은 디자인으로 나온다."""
         rows = self._build_full_rows()
         if not rows:
-            messagebox.showinfo("알림", "인쇄할 데이터가 없습니다.")
+            messagebox.showinfo("알림", "인쇄할 데이터가 없습니다." if self._queried else "인쇄할 데이터가 없습니다. 먼저 [조회]를 누르세요.")
             return
         headers = ("도서명", "바코드", "AREA", "SECTION", "단", "열", "서가번호",
                   "전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")

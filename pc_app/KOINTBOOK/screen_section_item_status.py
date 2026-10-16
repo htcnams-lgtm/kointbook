@@ -227,8 +227,26 @@ class SectionItemStatusScreen(tk.Frame):
         self._range_text = build_range_text("전체")
         self._view_page = 0
         self._view_total_pages = 1
+        # [2026-10-16] "섹션별 아이템 현황과 재고조사 차이내역은 화면뜨기까지 시간이 걸리니 최초화면은 빈화면, 조회누르면
+        # 전체 조회" - 들어올 때 자동으로 조회하지 않고 빈 화면으로 둔다. [조회]/Enter로 조회한 뒤에는 조회 항목이나
+        # AREA 합산전/후를 바꾸면 예전처럼 바로 다시 조회한다(_queried).
+        self._queried = False
         self._build_ui()
-        self.refresh()
+        self.clear_view()
+
+    def clear_view(self):
+        """빈 화면으로 되돌린다(처음 열 때, 그리고 들어올 때 데이터가 바뀌어 지난 조회 결과가 맞지 않을 때)."""
+        self._queried = False
+        self._rows, self._kinds, self._nos = [], [], []
+        self._item_count = self._qty_total = 0
+        self._range_text = build_range_text("전체")
+        self._load_page(0)
+        self.lbl_total.config(text="(조회 버튼을 누르면 조회됩니다)")
+
+    def auto_refresh(self):
+        """조회 항목·AREA 합산전/후를 바꿨을 때: 이미 조회한 적이 있을 때만 바로 다시 조회한다."""
+        if self._queried:
+            self.refresh()
 
     def _build_ui(self):
         top = tk.Frame(self, bg=CL_BG)
@@ -274,9 +292,9 @@ class SectionItemStatusScreen(tk.Frame):
         # 왼쪽으로 옮겼다.
         self.merge_mode = tk.StringVar(value="합산전")
         tk.Radiobutton(top, text="AREA 합산전", variable=self.merge_mode, value="합산전", bg=CL_BG,
-                       command=self.refresh).pack(side=tk.LEFT, padx=(20, 0))
+                       command=self.auto_refresh).pack(side=tk.LEFT, padx=(20, 0))
         tk.Radiobutton(top, text="AREA 합산후", variable=self.merge_mode, value="합산후", bg=CL_BG,
-                       command=self.refresh).pack(side=tk.LEFT)
+                       command=self.auto_refresh).pack(side=tk.LEFT)
 
         win_button(top, text="조회", command=self.refresh, kind="normal").pack(side=tk.LEFT, padx=(12, 0))
 
@@ -319,7 +337,7 @@ class SectionItemStatusScreen(tk.Frame):
             self.search_area_section_frame.pack_forget()
             self.e_value.pack(side=tk.LEFT)
         if do_refresh:
-            self.refresh()
+            self.auto_refresh()
 
     def refresh(self):
         mode = self.mode.get()
@@ -399,6 +417,7 @@ class SectionItemStatusScreen(tk.Frame):
         self._rows, self._kinds, self._nos, self._item_count, self._qty_total = build_status_rows(rows, merged=merged)
         self._view_total_pages = max(1, (len(self._rows) + PAGE_ROWS - 1) // PAGE_ROWS)
         self._load_page(0)
+        self._queried = True
 
     def _load_page(self, page=0):
         """조회된 줄(self._rows) 전체를 가상 스크롤 표에 보여준다(이름은 예전 그대로)."""
@@ -427,7 +446,7 @@ class SectionItemStatusScreen(tk.Frame):
         출력일자 블록 + 페이지 머리글·바닥글)으로 저장한다. 제목은 "섹션별 아이템 재고현황", 정보 블록
         가운데 칸에는 조회한 범위(AREA/SECTION/서가번호)가 들어간다. 줄이 많으면 진행률 창을 띄운다."""
         if not getattr(self, "_rows", None):
-            messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
+            messagebox.showinfo("알림", "저장할 데이터가 없습니다." if self._queried else "저장할 데이터가 없습니다. 먼저 [조회]를 누르세요.")
             return
         path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
@@ -485,7 +504,7 @@ class SectionItemStatusScreen(tk.Frame):
         뜨도록 print_excel_file()로 바꿨다. [2026-10-16] 엑셀저장과 같은
         양식(재고조사 차이내역 상단 형식)으로 인쇄한다."""
         if not getattr(self, "_rows", None):
-            messagebox.showinfo("알림", "인쇄할 데이터가 없습니다.")
+            messagebox.showinfo("알림", "인쇄할 데이터가 없습니다." if self._queried else "인쇄할 데이터가 없습니다. 먼저 [조회]를 누르세요.")
             return
         tmp_dir = os.path.join(tempfile.gettempdir(), "kointbook_print")
         os.makedirs(tmp_dir, exist_ok=True)

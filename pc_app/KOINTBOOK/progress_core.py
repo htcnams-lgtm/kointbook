@@ -33,7 +33,7 @@ class Progress:
         self.message = ""
         self.done = 0
         self.total = 0          # 0 이하이면 전체 크기를 모르는 상태(빙글빙글 표시)
-        self.unit = "count"     # "count"(건) 또는 "bytes"(파일 크기)
+        self.unit = "count"     # "count"(건), "bytes"(파일 크기) 또는 "files"(만드는 파일 개수)
         self.cancelled = False
         self._phase_started = time.time()
 
@@ -96,6 +96,10 @@ def format_detail(done, total, unit, phase_elapsed, total_elapsed):
     if unit == "bytes":
         def fmt(n):
             return f"{n / 1048576:.1f} MB"
+    elif unit == "files":
+        # [2026-10-16] 자료를 한꺼번에 만들 때: 파일마다 걸리는 시간이 크게 달라 남은 시간은 추정하지 않는다.
+        def fmt(n):
+            return f"{int(n):,}개"
     else:
         def fmt(n):
             return f"{int(n):,}건"
@@ -103,7 +107,7 @@ def format_detail(done, total, unit, phase_elapsed, total_elapsed):
     if total and total > 0:
         pct = min(100.0, done * 100.0 / total)
         line1 = f"{fmt(done)} / {fmt(total)}  ({pct:.0f}%)"
-        if done > 0 and phase_elapsed >= 1.0 and done < total:
+        if unit != "files" and done > 0 and phase_elapsed >= 1.0 and done < total:
             remain = phase_elapsed * (total - done) / done
             line2 = f"경과 {format_seconds(total_elapsed)}  ·  남은 시간 약 {format_seconds(remain)}"
         else:

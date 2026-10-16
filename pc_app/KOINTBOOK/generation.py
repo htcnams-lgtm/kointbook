@@ -63,7 +63,8 @@ kyobo_data2.txt + 인천_결과확인리스트(20251017).xlsx + 인천_서가별
 import re
 from pathlib import Path
 from . import db as dbmod
-from .ui_common import file_date, normalize_area, short_store_label, write_text_lines_file, eof_crlf_enabled, split_scan_datetime
+from .ui_common import file_date, normalize_area, short_store_label, write_text_lines_file, write_rows_to_excel_file, \
+    eof_crlf_enabled, split_scan_datetime
 from .masters import norm_barcode, bc13, disp_qty, disp_exc
 from . import scope
 
@@ -527,7 +528,7 @@ def write_text_lines(lines, path):
         f.write(("\r\n".join(lines) + ("\r\n" if (lines and eof_crlf_enabled()) else "")).encode("utf-8"))
 
 
-def item_list_rows(app, include_zero=True):
+def item_list_rows(app, include_zero=True, book_rows=None):
     """③ 단품 리스트생성 (결과확인리스트): 상품마스터 전체 품목에 이번
     조사의 스캔재고/차이를 더한 비교표.
     컬럼: 바코드,도서명,분야,출판사,전산재고,실재고,누락재고,예외여부,
@@ -540,7 +541,7 @@ def item_list_rows(app, include_zero=True):
     # include_zero=True(기본) 이면 전산재고·실재고·스캔이 모두 0인 품목도 넣는다(화면의 체크 옵션, 받은 쪽 파일도 장부 전체 행).
     # [2026-10-16] 기본값을 False -> True로(AREA별 합산 화면에서도 전체 행).
     ledger_map = {bc13(k): v for k, v in _fetch_ledger_map(store_code, "서적").items()}
-    counts = split_counts(app)[0]
+    counts = split_counts(app)[0] if book_rows is None else book_rows   # book_rows: 이미 나눈 서적 행(자료 한꺼번에 생성할 때 다시 안 읽으려고)
     scanned = {}
     for r in counts:
         isbn = bc13(r["isbn"])
@@ -587,7 +588,7 @@ def item_list_rows(app, include_zero=True):
     return headers, data
 
 
-def shelf_rows(app):
+def shelf_rows(app, book_rows=None):
     """④ 서가별 생성 (서가별스캔데이터): 스캔 1건당 1행(집계하지 않음).
     컬럼: 바코드,도서명,분야,출판사,서가번호,실사수량.
     [2026-10-16] 도서명·분야·출판사는 서적 장부마스터 기준, 장부마스터에 없는 바코드만 서적 상품마스터로 보충한다
@@ -595,7 +596,7 @@ def shelf_rows(app):
     store_code = app.state.store_code
     ledger_map = _fetch_names_map("ledger_master", store_code, "서적")
     books_map = _fetch_names_map("books", store_code, "서적")
-    rows = nonzero_rows(split_counts(app)[0])  # 서적 행만, 실사수량 0 줄 제외
+    rows = nonzero_rows(split_counts(app)[0] if book_rows is None else book_rows)  # 서적 행만, 실사수량 0 줄 제외
     data = []
     for r in sorted(rows, key=lambda x: (bc13(x["isbn"]), shelf_code(x, store_code))):
         isbn = str(r["isbn"] or "").strip()
@@ -613,10 +614,10 @@ def shelf_rows(app):
     return headers, data
 
 
-def shelf_sum_rows(app):
+def shelf_sum_rows(app, book_rows=None, base=None):
     """서가별스캔데이터(서가별 합산): 서가별스캔데이터와 같은 컬럼·이름 기준인데, 같은 바코드 + 같은 서가번호는 한 줄로 합산한다
     ([2026-10-16] 사용자 요청). 컬럼: 바코드,도서명,분야,출판사,서가번호,실사수량(합계). 합계가 0이면 뺀다. 정렬: 바코드 -> 서가번호."""
-    headers, data = shelf_rows(app)
+    headers, data = base if base is not None else shelf_rows(app, book_rows)   # base = 이미 만든 서가별스캔데이터 (headers, data)
     tot, first = {}, {}
     for r in data:
         k = (r[0], r[4])
@@ -749,46 +750,142 @@ def stat_scan_filename(app):
 STAT_FILE_KEYS = ("loc", "det", "loc_x", "det_x", "stat_scan", "stat_list")  # 화면에 보이는 순서(txt 밑에 같은 내용 xlsx, 그 아래 로케이션별스캔데이터, 결과확인리스트)
 
 
+def step_begin(progress, label):
+    """[2026-10-16] 자료를 한꺼번에 만들 때 진행률 팝업용: [취소]를 눌렀으면 여기서 멈추고(이미 만든 파일은 남음),
+    지금 만드는 파일 이름을 보여 준다. progress가 None이면 아무것도 하지 않는다."""
+    if progress is not None:
+        progress.check_cancel()
+        progress(message=f"{label} 만드는 중...", done=progress.done)
+
+
+def step_end(progress):
+    """파일 하나를 다 만들었을 때 진행 개수를 하나 올린다."""
+    if progress is not None:
+        progress(done=progress.done + 1)
+
+
 def write_stat_xlsx(path, headers, rows, qty_cols=()):
     """문구 자료 엑셀: 바코드·위치·코드류는 글자 그대로(앞자리 0 보존), qty_cols 칸만 숫자 + 3자리 콤마. 열 너비는 자동."""
     from . import fast_xlsx
     fast_xlsx.write_xlsx(path, list(headers), rows, amount_cols=list(qty_cols))
 
 
-def generate_stat_files(app, out_dir, only=None, include_zero=True):
+def generate_stat_files(app, out_dir, only=None, include_zero=True, progress=None, counts=None):
     """문구 자료를 쓰고 (파일이름, 줄 수) 리스트를 돌려준다. only = STAT_FILE_KEYS 중 만들 것(None이면 전부):
     loc/det = 납품로케이션·납품상세 txt, loc_x/det_x = 같은 내용의 xlsx(납품상세 txt 밑, [2026-10-16] 사용자 요청으로 복구),
     stat_scan = 문구 로케이션별스캔데이터.xlsx, stat_list = 문구 결과확인리스트.xlsx. 문구 스캔이 없으면 빈 리스트. txt는 모두 UTF-8."""
     only = set(STAT_FILE_KEYS if only is None else only)
-    _b, stat_rows, stat = split_counts(app)
+    _b, stat_rows, stat = split_counts(app) if counts is None else counts   # counts = 이미 나눈 (서적, 문구, 문구맵)
     if not stat_rows:
         return []
     out = []
     if "loc" in only:
+        step_begin(progress, "문구 · " + stat_location_filename(app))
         lines = stat_location_lines(app, stat_rows)
         write_text_lines_file(lines, out_dir / stat_location_filename(app))  # 숫자/ASCII뿐
         out.append((stat_location_filename(app), len(lines)))
+        step_end(progress)
     if "det" in only:
+        step_begin(progress, "문구 · " + stat_detail_filename(app))
         lines = stat_detail_lines(app, stat_rows, stat)
         write_text_lines(lines, out_dir / stat_detail_filename(app))
         out.append((stat_detail_filename(app), len(lines)))
+        step_end(progress)
     if "loc_x" in only:
+        step_begin(progress, "문구 · " + stat_location_filename(app, "xlsx"))
         rows = stat_location_rows(app, stat_rows)
         write_stat_xlsx(out_dir / stat_location_filename(app, "xlsx"), STAT_LOC_HEADERS, rows, qty_cols=(2,))
         out.append((stat_location_filename(app, "xlsx"), len(rows)))
+        step_end(progress)
     if "det_x" in only:
+        step_begin(progress, "문구 · " + stat_detail_filename(app, "xlsx"))
         rows = stat_detail_rows(app, stat_rows, stat)
         write_stat_xlsx(out_dir / stat_detail_filename(app, "xlsx"), STAT_DET_HEADERS, rows, qty_cols=(3, 4))
         out.append((stat_detail_filename(app, "xlsx"), len(rows)))
+        step_end(progress)
     if "stat_scan" in only:
+        step_begin(progress, "문구 · " + stat_scan_filename(app))
         headers, rows = stat_scan_rows(app, stat_rows)
         write_stat_xlsx(out_dir / stat_scan_filename(app), headers, rows, qty_cols=(5,))
         out.append((stat_scan_filename(app), len(rows)))
+        step_end(progress)
     if "stat_list" in only:
+        step_begin(progress, "문구 · " + item_list_filename(app, "문구"))
         headers, rows = stat_item_list_rows(app, include_zero=include_zero, stat_rows=stat_rows)
         write_stat_xlsx(out_dir / item_list_filename(app, "문구"), headers, rows, qty_cols=(4, 8, 9))
         out.append((item_list_filename(app, "문구"), len(rows)))
+        step_end(progress)
     return out
+
+
+BOOK_FILE_KEYS = ("d1", "d2", "list", "shelf", "shelf_sum")   # 서적 카드의 순서
+
+
+def generate_selected(app, do_book, do_stat, files, zero_book=True, zero_stat=True, progress=None):
+    """[자료생성] [선택한 자료 생성]: 체크한 서적/문구 자료를 한 번에 만든다. 화면(tkinter)을 건드리지 않아
+    백그라운드 스레드에서 돌릴 수 있다. files = {파일 키: 체크 여부}(서적 BOOK_FILE_KEYS + 문구 STAT_FILE_KEYS).
+    (만든 파일 [(폴더/이름, 줄 수)], 확인할 항목 [글]) 을 돌려준다.
+    [2026-10-16] "서적자료, 문구자료 동시 생성시 시간이 걸리니 진행률을" - 파일 하나를 만들 때마다 progress로
+    알린다(단위 files). 실사 자료는 한 번만 읽어서 파일마다 다시 읽지 않는다. [취소]는 파일과 파일 사이에서 받는다."""
+    book_dir = output_dir(app, "서적")
+    stat_dir = output_dir(app, "문구")
+    done, skipped = [], []
+    if progress is not None:
+        progress(message="실사 자료를 불러오는 중...", done=0, total=0, unit="files")
+        progress.check_cancel()
+    counts = split_counts(app)
+    book_rows, stat_rows, stat = counts
+    book_keys = [k for k in BOOK_FILE_KEYS if files.get(k)] if do_book and book_rows else []
+    stat_keys = [k for k in STAT_FILE_KEYS if files.get(k)] if do_stat and stat_rows else []
+    if progress is not None:
+        progress(total=1 + len(book_keys) + len(stat_keys), done=1)
+    if do_book:
+        if not book_rows:
+            skipped.append("서적: 서적 실사 자료가 없습니다")
+        else:
+            shelf = None
+            for key in book_keys:
+                if key == "d1":
+                    step_begin(progress, "서적 · kyobo_data1.txt")
+                    lines = kyobo_data1_lines(app, book_rows)
+                    write_text_lines_file(lines, book_dir / "kyobo_data1.txt")
+                    done.append(("서적전용/kyobo_data1.txt", len(lines)))
+                elif key == "d2":
+                    step_begin(progress, "서적 · kyobo_data2.txt")
+                    lines = kyobo_data2_lines(app, book_rows)
+                    write_text_lines_file(lines, book_dir / "kyobo_data2.txt")
+                    done.append(("서적전용/kyobo_data2.txt", len(lines)))
+                elif key == "list":
+                    name = item_list_filename(app, "서적")
+                    step_begin(progress, "서적 · " + name)
+                    headers, rows = item_list_rows(app, include_zero=zero_book, book_rows=book_rows)
+                    write_rows_to_excel_file(rows, headers, book_dir / name)
+                    done.append(("서적전용/" + name, len(rows)))
+                elif key == "shelf":
+                    name = shelf_filename(app, "서적")
+                    step_begin(progress, "서적 · " + name)
+                    shelf = shelf_rows(app, book_rows)   # 서가별 합산에서 다시 계산하지 않도록 기억해 둔다
+                    write_rows_to_excel_file(shelf[1], shelf[0], book_dir / name)
+                    done.append(("서적전용/" + name, len(shelf[1])))
+                elif key == "shelf_sum":
+                    name = shelf_sum_filename(app, "서적")
+                    step_begin(progress, "서적 · " + name)
+                    headers, rows = shelf_sum_rows(app, book_rows, base=shelf)
+                    write_rows_to_excel_file(rows, headers, book_dir / name)
+                    done.append(("서적전용/" + name, len(rows)))
+                step_end(progress)
+    if do_stat:
+        if not stat_rows:
+            skipped.append("문구: 문구 실사 자료가 없습니다")
+        else:
+            for name, n in generate_stat_files(app, stat_dir, only=stat_keys, include_zero=zero_stat,
+                                               progress=progress, counts=counts):
+                done.append(("문구전용/" + name, n))
+            if "det" in stat_keys or "det_x" in stat_keys:
+                miss = missing_stat_master(stat_rows, stat)
+                if miss:
+                    skipped.append(f"참고: 문구 범위의 바코드 {miss:,}종이 문구 상품마스터에 없어 단가·구분코드·납품처가 비어 있습니다")
+    return done, skipped
 
 
 def item_list_filename(app, kind="서적"):
