@@ -39,7 +39,7 @@ kyobo_data2.txt + 인천_결과확인리스트(20251017).xlsx + 인천_서가별
                        상관없이 전부) + 이번 조사의 스캔재고/차이를 더한
                        비교표. 컬럼: 바코드,도서명,분야,출판사,전산재고,
                        실재고,누락재고,예외여부,스캔재고,차이
-                       (차이 = 스캔재고 - 전산재고)
+                       (차이 = 스캔재고 - 전산재고 + 누락재고)
   ④ 서가별 생성      : "서가별스캔데이터" - 스캔 1건당 1행(집계하지 않음).
                        컬럼: 바코드,도서명,분야,출판사,서가번호,실사수량
   자료생성(미등록)   : 상품마스터에 없는(미등록) 바코드만 모은 리스트
@@ -532,7 +532,8 @@ def item_list_rows(app, include_zero=True, book_rows=None):
     """③ 단품 리스트생성 (결과확인리스트): 상품마스터 전체 품목에 이번
     조사의 스캔재고/차이를 더한 비교표.
     컬럼: 바코드,도서명,분야,출판사,전산재고,실재고,누락재고,예외여부,
-    스캔재고,차이 (차이 = 스캔재고 - 전산재고)."""
+    스캔재고,차이 (차이 = 스캔재고 - 전산재고 + 누락재고).
+    [2026-10-17] 사용자 요청: 차이 계산에 누락재고를 더한다(예전: 스캔재고 - 전산재고)."""
     store_code = app.state.store_code
     # [2026-10-08] 전산재고/실재고/누락재고/예외여부는 장부마스터 기준(상품마스터는 PDA용).
     # 장부마스터에 없는 바코드는 상품마스터의 이름 정보만 빌리고 수량은 0으로 본다.
@@ -584,7 +585,7 @@ def item_list_rows(app, include_zero=True, book_rows=None):
             d_rcds, d_real, d_miss = rcds, real, miss
         data.append((isbn, nb["book_name"], nb["category"], nb["publisher"],
                     d_rcds, d_real, d_miss, is_exc,
-                    scan_qty, scan_qty - rcds))
+                    scan_qty, scan_qty - rcds + miss))
     return headers, data
 
 
