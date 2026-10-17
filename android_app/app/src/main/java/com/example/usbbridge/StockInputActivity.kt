@@ -81,6 +81,39 @@ class StockInputActivity : BaseActivity() {
     private var listTotalQty = 0
     private var selectedRowIndex = -1
 
+    // [2026-10-16] 도서 AREA에 문구 상품(문구 AREA에 도서 상품)을 입력하려 해서 막는 경고창이 떠 있는 동안 true.
+    // 경고창에서 확인을 누르기 전에는 새 스캔/입력을 받지 않는다.
+    private var kindBlockShowing = false
+
+    /**
+     * [2026-10-16] "도서 에리어에서 문구 상품 스캔 및 입력금지 / 문구 에리어에서 도서 상품 스캔 및 입력금지" -
+     * 지금 AREA의 구분(도서/문구)과 이 바코드의 상품마스터 구분(BarcodeKind.kindOf)이 다르면 저장하지 않고
+     * 경고음(진동) + 큰 빨간 경고창을 띄운 뒤 false를 돌려준다. 스캔이든 손으로 친 값이든 같은 검사를 받는다.
+     * 마스터에 없는 바코드(미등록)나 구분이 없는 옛 마스터, 도서/문구 범위 밖 AREA는 구분할 수 없어 검사하지 않는다
+     * (미등록은 기존 [미등록상품] 설정이 처리).
+     */
+    private fun allowedForArea(code: String, info: DbHelper.BookInfo?): Boolean {
+        val areaKind = AppState.kindOfArea(AppState.currentArea) ?: return true
+        val itemKind = BarcodeKind.kindOf(info) ?: return true
+        if (itemKind == areaKind) return true
+        val block = BarcodeKind.blockText(
+            AppState.currentArea, areaKind, code, info?.bookName ?: "", itemKind
+        )
+        kindBlockShowing = true
+        scanDetector.cancel()
+        SoundUtil.zzointWarning(this)
+        Dialogs.kindBlock(this, block.headline, block.detail) {
+            kindBlockShowing = false
+            markDialogClosed()
+            scanDetector.cancel()
+            etIsbn.setText("")
+            etQty.setText("")
+            tvBookName.text = ""
+            etIsbn.requestFocus()
+        }
+        return false
+    }
+
     // [2026-10-02] 키보드처럼 들어오는(엔터 없는) 스캔 입력 감지 - ScanInputDetector.kt 참고
     private val scanDetector = ScanInputDetector(onScanned = {
         val code = etIsbn.text.toString().trim()
@@ -294,6 +327,7 @@ class StockInputActivity : BaseActivity() {
             val state = intent.getStringExtra("SCAN_STATE")
             if (state == "ok" && !isbn.isNullOrEmpty()) {
                 runOnUiThread {
+                    if (kindBlockShowing) return@runOnUiThread
                     scanDetector.suppressed = true
                     etIsbn.setText(isbn)
                     scanDetector.suppressed = false
@@ -405,7 +439,7 @@ class StockInputActivity : BaseActivity() {
                 val code = s.toString().trim()
                 if (code.isEmpty()) { tvBookName.text = ""; return }
                 val info = db.findBook(AppState.storeCode, code)
-                tvBookName.text = if (info == null) "(미등록 도서 - 그대로 등록 가능)" else {
+                tvBookName.text = if (info == null) "(미등록 ${itemWord()} - 그대로 등록 가능)" else {
                     val cat = if (info.category.isNotEmpty()) "  [${info.category}]" else ""
                     "${info.bookName}$cat"
                 }
@@ -445,13 +479,22 @@ class StockInputActivity : BaseActivity() {
         try { unregisterReceiver(scanReceiver) } catch (_: Exception) {}
     }
 
+    /**
+     * [2026-10-16] "pda 미등록 메세지 문구는 도서가 아니라 문구로" - 미등록 안내(입력칸 아래 글, 차단 팝업, 확인 팝업)에
+     * 문구 AREA에서는 '도서' 대신 '문구'를 쓴다. 도서 AREA와 도서/문구 범위 밖 AREA는 예전처럼 '도서'.
+     */
+    private fun itemWord(): String = if (AppState.isStationery) "문구" else "도서"
+
     /** ISBN이 스캔/입력으로 확정되었을 때 공통 처리 */
     private fun onIsbnConfirmed(isbn: String) {
+        if (kindBlockShowing) return
         // 상품(도서)마스터가 수신되어 있는데 이 ISBN이 그 안에 없으면(미등록 도서)
         // 그대로 등록할지 먼저 확인한다. 도서마스터 자체가 없으면(전체 ISBN
         // 허용 모드) 이 확인 없이 바로 진행한다.
         val hasMaster = db.hasAnyBooks(AppState.storeCode)
         val info = db.findBook(AppState.storeCode, isbn)
+        // [2026-10-16] 도서/문구 AREA와 맞지 않는 바코드는 미등록 확인보다 먼저 막는다.
+        if (!allowedForArea(isbn, info)) return
         // [2026-10-08] PC 상품마스터 화면의 [미등록상품] 설정(allow/warn/block)을 따른다.
         // 미등록일 때만 설정을 읽는다(등록된 바코드 스캔에는 추가 DB 조회 없음)
         val unregPolicy = if (hasMaster && info == null) db.getSetting("unreg_policy", "warn") else "warn"
@@ -459,7 +502,8 @@ class StockInputActivity : BaseActivity() {
             proceedIsbn(isbn)
         } else if (hasMaster && info == null && unregPolicy == "block") {
             SoundUtil.warningBeep(this)
-            Dialogs.info(this, "미등록 도서", "도서마스터에 없는 도서는 입력할 수 없습니다.\n(PC 설정: 차단)")
+            val w = itemWord()
+            Dialogs.info(this, "미등록 $w", "${w}마스터에 없는 ${w}는 입력할 수 없습니다.\n(PC 설정: 차단)")
             etIsbn.setText("")
             etIsbn.requestFocus()
         } else if (hasMaster && info == null) {
@@ -467,7 +511,7 @@ class StockInputActivity : BaseActivity() {
             Dialogs.confirm(
                 activity = this,
                 title = "확인",
-                message = "도서마스터에 없는 미등록도서 입니다.\n입력하시겠습니까?",
+                message = "${itemWord()}마스터에 없는 미등록${itemWord()} 입니다.\n입력하시겠습니까?",
                 positiveText = "예",
                 negativeText = "아니오",
                 focusPositive = false, // 기본값 '아니오'
@@ -525,6 +569,8 @@ class StockInputActivity : BaseActivity() {
         val dan = etDan.text.toString().ifEmpty { "1" }
         val yeol = etYeol.text.toString().ifEmpty { "1" }
         val info = db.findBook(AppState.storeCode, isbn)
+        // [2026-10-16] 저장 직전에도 한 번 더 검사한다(수동 모드에서 바코드 칸을 고쳐서 수량만 엔터 친 경우 등).
+        if (!allowedForArea(isbn, info)) return
         val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
 
         // [2026-09-29] "영문 대소문자 구분없이 상품마스터에 맞는쪽으로 자동변경" -

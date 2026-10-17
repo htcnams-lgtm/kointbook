@@ -68,7 +68,7 @@ from . import db as dbmod
 from .progress_core import Cancelled
 from .progress_dialog import run_with_progress
 from .masters import disp_qty, disp_exc
-from .ui_common import setup_treeview, print_rows_to_excel, print_excel_file, today_str, friendly_save_error, \
+from .ui_common import setup_treeview, print_rows_to_excel, print_excel_file, file_date, friendly_save_error, \
     normalize_area, digit_code_variants, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
 
 # [2026-09-28] "엑셀저장할때 오래걸려도 진행률 다이얼로그가 안뜨는데?" - 이
@@ -135,8 +135,19 @@ def _indent_row(row):
     return tuple(row)
 
 
-def _write_diff_detail_workbook(path, rows, headers, progress=None, report_header=None, summary_only=False):
-    """[2026-09-28] "엑셀저장시 엑셀 내용에 맞게 열너비를 타이트하게, 헤더와
+def _write_diff_detail_workbook(path, rows, headers, progress=None, report_header=None, summary_only=False,
+                                title=None, info_center_text=None, row_kinds=None, left_align_cols=_LEFT_INDENT_COL_IDX,
+                                center_align_cols=(2, 3, 4, 5, 6, 10), numeric_cols=None, equal_width_headers=None):
+    """[2026-10-16] "섹션별 아이템 재고현황" 엑셀도 이 재고조사 차이내역 양식(상단 정보 블록 + 페이지
+    머리글/바닥글)을 그대로 쓰도록, 아래 선택 인자를 추가했다. 모두 비워 두면(재고조사 차이내역) 예전과 똑같다.
+      - title: 페이지 머리글 제목(기본 "재고조사 차이내역").
+      - info_center_text: 정보 블록 3행 가운데 칸 글자(기본 "차이수량(±) : 0 이상" 같은 차이수량 조건).
+      - row_kinds: rows와 같은 길이의 목록. None=일반 줄, "sub"=소계(단소계), "sec"=한 단계 큰 소계(섹션소계),
+        "total"=합계. 주면 소계/합계 줄을 열 값으로 추정하지 않고 이 값대로 칠한다.
+      - left_align_cols / center_align_cols / numeric_cols: 왼쪽 정렬(들여쓰기)·가운데 정렬·수량 서식(3자리 콤마) 열 번호(0부터).
+      - equal_width_headers: 너비를 같게 맞출 열 머리글들(기본은 전산재고~비고).
+
+    [2026-09-28] "엑셀저장시 엑셀 내용에 맞게 열너비를 타이트하게, 헤더와
     소계 합계등 프로그램 디자인에 맞게 셀배경색/글씨굵기등 조절, 수량란은
     꼭 세자리 콤마" - 기존 export_rows_to_excel()/print_rows_to_excel()은
     모든 화면이 공용으로 쓰는 "글자만 있는" 단순한 서식(헤더만 굵게, 열
@@ -204,6 +215,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
     from .progress_core import report as _report
 
     total = len(rows)
+    numeric_set = set(numeric_cols) if numeric_cols is not None else _NUMERIC_COL_INDEXES
     _report(progress, message="엑셀 파일을 만드는 중...", done=0, total=total, unit="count")
 
     wb = openpyxl.Workbook()
@@ -226,7 +238,8 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
     # 너비가 동일하게" - 발행 전용으로 이 6칸을 그 중 가장 넓은 폭에
     # 맞춰 통일한다(엑셀저장은 예전처럼 칼럼마다 내용에 맞춘 너비 그대로).
     if report_header:
-        _EQUAL_WIDTH_HEADERS = ("전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")
+        _EQUAL_WIDTH_HEADERS = equal_width_headers or \
+            ("전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")
         _equal_idx = [i for i, h in enumerate(headers) if h in _EQUAL_WIDTH_HEADERS]
         if _equal_idx:
             _equal_w = max(widths[i] for i in _equal_idx)
@@ -376,7 +389,8 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
         # 글자가 굵게 되어 있었다 - 그대로 반영(굵게).
         diff_font = Font(size=info_pt, name="맑은 고딕", bold=True)
         _info_cell(3, left_start, mid_start - 1, f"점포명 : {store_name}")
-        _info_cell(3, mid_start, mid_end, f"차이수량(±) : {diff_disp}", align=align_center, font=diff_font)
+        _info_cell(3, mid_start, mid_end, info_center_text if info_center_text is not None
+                   else f"차이수량(±) : {diff_disp}", align=align_center, font=diff_font)
         _info_cell(3, label_start, label_end, "출력일자 :", align=align_right)
         _info_cell(3, value_start, value_end, printed_at, align=align_left)
 
@@ -388,7 +402,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
         # 셀이 아니라 인쇄될 때 모든 페이지 위/아래에 독립적으로 반복되는
         # 엑셀 고유 영역이라, "페이지 수는 인쇄 시점에 자동 계산"되는
         # &N(총 페이지)/&P(현재 페이지)를 그대로 쓸 수 있다.
-        ws.oddHeader.center.text = "재고조사 차이내역"
+        ws.oddHeader.center.text = title or "재고조사 차이내역"
         ws.oddHeader.center.size = 18
         ws.oddHeader.center.font = "맑은 고딕"  # [2026-09-29] "글씨는 굵기 얇게" - Bold 제거
         ws.oddHeader.right.text = "&P of &N"
@@ -457,6 +471,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
         # 소계/합계/짝수줄 음영 - 회색 톤("모든 칼라 인쇄가 불가하니
         # 회색음영으로").
         subtotal_fill = PatternFill("solid", fgColor="EFEFEF")
+        section_fill = PatternFill("solid", fgColor="E0E0E0")  # 섹션소계(단소계보다 한 단계 진한 회색)
         total_fill = PatternFill("solid", fgColor="D9D9D9")
         odd_fill = PatternFill("solid", fgColor="F7F7F7")
         gold_top = Border(top=Side(style="thin", color="9E9E9E"))
@@ -468,6 +483,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
     else:
         # 소계/합계: 화면(tag_configure)의 골드톤과 맞춘 채우기색(예전 그대로).
         subtotal_fill = PatternFill("solid", fgColor="F3EAD3")   # COLOR_SUBTOTAL_CYAN과 동일
+        section_fill = subtotal_fill
         total_fill = PatternFill("solid", fgColor="E8D9B0")      # COLOR_SUBTOTAL_GREEN과 동일
         odd_fill = PatternFill("solid", fgColor="F6F7F9")        # 표의 "odd" 줄무늬와 동일
         gold_top = Border(top=Side(style="thin", color="B08D3E"))
@@ -500,7 +516,8 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
             _report(progress, done=data_row_i)
             progress.check_cancel()  # [취소] 눌렀으면 여기서 Cancelled 예외로 중단
         excel_row = [ws.cell(row=excel_row_num, column=c) for c in range(1, len(row) + 1)]
-        is_total = row[0] == "합  계"
+        kind = row_kinds[data_row_i - 1] if row_kinds is not None else None
+        is_total = (kind == "total") if row_kinds is not None else row[0] == "합  계"
         # [2026-09-28] 소계 줄의 첫 칸이 이제 "소  계" 고정 문구가 아니라
         # [합계조회] 모드에서는 도서명으로 바뀔 수 있어(요청: "합계조회만
         # 눌렀을땐 소계대신 바코드에 맞는 도서명을 보여줘"), 문구로 판별할
@@ -513,9 +530,12 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
         # 그러면 위 판별식으로는 "전부 다" 소계로 인식돼 모든 줄에 소계
         # 음영/아랫선이 그대로 붙어버렸다. summary_only일 때는 합계 줄만
         # 강조하고 소계 음영/선은 아예 적용하지 않는다.
-        is_subtotal = (not summary_only) and (not is_total) and all(
-            row[i] != "" and row[i] is not None for i in (7, 8, 9)
-        )
+        if row_kinds is not None:
+            is_subtotal = kind in ("sub", "sec")
+        else:
+            is_subtotal = (not summary_only) and (not is_total) and all(
+                row[i] != "" and row[i] is not None for i in (7, 8, 9)
+            )
         for col_i, cell in enumerate(excel_row):
             if data_font is not None:
                 cell.font = data_font
@@ -527,7 +547,7 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
                 cell.border = Border(left=data_vborder.left, right=data_vborder.right,
                                       top=navy_top.top) if data_vborder else navy_top
             elif is_subtotal:
-                cell.fill = subtotal_fill
+                cell.fill = section_fill if kind == "sec" else subtotal_fill
                 cell.font = bold_font
                 # [2026-09-29] "소계 줄 윗면에 선이 아직도 그어져있어, 아랫면에
                 # 선을 그어주고" - 화면(Treeview)은 이미 옵션 A(아랫선만)로
@@ -538,13 +558,15 @@ def _write_diff_detail_workbook(path, rows, headers, progress=None, report_heade
                                       bottom=gold_top.top) if data_vborder else Border(bottom=gold_top.top)
             elif data_row_i % 2 == 0:
                 cell.fill = odd_fill
-            if report_header and col_i in (0, 1):
+            if report_header and col_i in left_align_cols:
                 # [2026-09-29] "도서명, 바코드 항목 내용은 왼쪽정렬후
                 # 들여쓰기 한칸" (발행 전용 - 엑셀저장은 기존 기본 정렬 그대로).
                 cell.alignment = Alignment(horizontal="left", vertical="center", indent=1)
-            if col_i in (2, 3, 4, 5, 6, 10):  # AREA/SECTION/단/열/서가번호/예외여부 - 짧은 코드값은 가운데 정렬
-                cell.alignment = code_center
-            if col_i in _NUMERIC_COL_INDEXES:
+            if col_i in center_align_cols:  # AREA/SECTION/단/열/서가번호/예외여부 - 짧은 코드값은 가운데 정렬
+                # [2026-10-16] 섹션별 아이템 재고현황(row_kinds를 넘기는 경우)은 같은 줄의 글자 높이가 어긋나 보이지
+                # 않도록 세로도 가운데로 맞춘다(재고조사 차이내역은 예전 그대로).
+                cell.alignment = Alignment(horizontal="center", vertical="center") if row_kinds is not None else code_center
+            if col_i in numeric_set:
                 value = row[col_i]
                 if isinstance(value, (int, float)):
                     cell.number_format = "#,##0"  # [요청] 수량란은 꼭 3자리 콤마
@@ -608,8 +630,27 @@ class DiffDetailScreen(tk.Frame):
         self._grand = (0, 0, 0, 0, 0)  # (전산재고,실재고,누락재고,실사수량,차이수량) 전체 합
         self._view_page = 0
         self._view_total_pages = 1
+        # [2026-10-16] "섹션별 아이템 현황과 재고조사 차이내역은 화면뜨기까지 시간이 걸리니 최초화면은 빈화면, 조회누르면
+        # 전체 조회" - 들어올 때 자동으로 조회하지 않고 빈 화면으로 둔다. [조회]/[합계조회]/Enter로 조회한 뒤에는
+        # 조회기준·AREA 합산·구분을 바꾸면 예전처럼 바로 다시 조회한다(_queried).
+        self._queried = False
         self._build_ui()
-        self.refresh()
+        self.clear_view()
+
+    def clear_view(self):
+        """빈 화면으로 되돌린다(처음 열 때, 그리고 들어올 때 데이터가 바뀌어 지난 조회 결과가 맞지 않을 때)."""
+        self._queried = False
+        self._summary_only = False
+        self._groups = []
+        self._grand = (0, 0, 0, 0, 0)
+        self._view_total_pages = 1
+        self._load_page(0)
+        self.lbl_total.config(text="(조회 버튼을 누르면 조회됩니다)")
+
+    def auto_refresh(self):
+        """조회기준·AREA 합산전/후·구분을 바꿨을 때: 이미 조회한 적이 있을 때만 바로 다시 조회한다."""
+        if self._queried:
+            self.refresh(summary_only=False)
 
     def _build_ui(self):
         top = tk.Frame(self, bg=CL_BG)
@@ -658,9 +699,9 @@ class DiffDetailScreen(tk.Frame):
 
         self.merge_mode = tk.StringVar(value="합산전")
         tk.Radiobutton(top, text="AREA 합산전", variable=self.merge_mode, value="합산전", bg=CL_BG,
-                       command=lambda: self.refresh(summary_only=False)).pack(side=tk.LEFT, padx=(20, 0))
+                       command=self.auto_refresh).pack(side=tk.LEFT, padx=(20, 0))
         tk.Radiobutton(top, text="AREA 합산후", variable=self.merge_mode, value="합산후", bg=CL_BG,
-                       command=lambda: self.refresh(summary_only=False)).pack(side=tk.LEFT)
+                       command=self.auto_refresh).pack(side=tk.LEFT)
         tk.Label(actions, text="차이수량(±)", bg=CL_BG).pack(side=tk.LEFT, padx=(0, 4))
         self.e_diff = tk.Entry(actions, width=10)
         self.e_diff.pack(side=tk.LEFT)
@@ -674,8 +715,8 @@ class DiffDetailScreen(tk.Frame):
                        bg=CL_BG).pack(side=tk.LEFT, padx=(12, 0))
         tk.Radiobutton(actions, text="실사-실재고", variable=self.diff_basis, value="real",
                        bg=CL_BG).pack(side=tk.LEFT, padx=(0, 0))
-        # [2026-10-13] 서적/문구 구분(AREA·SECTION 범위). 구분을 바꾸면 바로 다시 조회한다.
-        self.bar = ScopeBar(actions, on_change=lambda: self.refresh(summary_only=False))
+        # [2026-10-13] 도서/문구 구분(AREA·SECTION 범위). 구분을 바꾸면 바로 다시 조회한다.
+        self.bar = ScopeBar(actions, on_change=self.auto_refresh)
         self.bar.pack(side=tk.LEFT, padx=(14, 0))
         win_button(actions, text="조회", command=lambda: self.refresh(summary_only=False),
                    kind="normal").pack(side=tk.LEFT, padx=8)
@@ -774,7 +815,7 @@ class DiffDetailScreen(tk.Frame):
             else:
                 self.e_filter.pack(side=tk.LEFT)
         if not initial:
-            self.refresh(summary_only=False)
+            self.auto_refresh()
 
     def _ktag(self):
         t = self.bar.tag()
@@ -939,14 +980,16 @@ class DiffDetailScreen(tk.Frame):
             if threshold is not None and abs(diff_qty) < threshold:
                 continue
 
-            book_name = group[0]["book_name"] if group else (b["book_name"] if b else (lg["book_name"] if lg else ""))
+            # [2026-10-16] 도서명은 장부마스터 기준, 장부에 없으면 상품마스터로 보충, 둘 다 없으면 스캔 때 저장된 이름.
+            master_name = (lg["book_name"] if lg and lg["book_name"] else None) or (b["book_name"] if b and b["book_name"] else None)
+            book_name = master_name or (group[0]["book_name"] if group else "")
 
             detail_rows = []
             if group:
                 # 위치별 상세 줄: 실사수량만 채우고 전산재고류는 빈칸.
                 for r in group:
                     area = normalize_area(r["area"], merged=merged)
-                    detail_rows.append((r["book_name"], isbn, area, r["section"], r["dan"], r["yeol"], r["shelf_no"],
+                    detail_rows.append((master_name or r["book_name"], isbn, area, r["section"], r["dan"], r["yeol"], r["shelf_no"],
                                          blank, blank, blank, blank, r["qty"], blank, blank))
             else:
                 # 스캔기록이 아예 없는 상품마스터 항목: 도서명/바코드만 채운
@@ -984,6 +1027,7 @@ class DiffDetailScreen(tk.Frame):
         self._grand = (grand_ledger, grand_real, grand_missing, grand_scanned, grand_diff)
         self._view_total_pages = max(1, (len(groups) + GROUP_PAGE_SIZE - 1) // GROUP_PAGE_SIZE)
         self._load_page(0)
+        self._queried = True
 
     def _build_full_rows(self):
         """엑셀저장/발행용 - 지금 조회된 전체(페이지 제한 없이)를 지금
@@ -1061,7 +1105,7 @@ class DiffDetailScreen(tk.Frame):
     def export_excel(self):
         rows = self._build_full_rows()
         if not rows:
-            messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
+            messagebox.showinfo("알림", "저장할 데이터가 없습니다." if self._queried else "저장할 데이터가 없습니다. 먼저 [조회]를 누르세요.")
             return
         headers = ("도서명", "바코드", "AREA", "SECTION", "단", "열", "서가번호",
                   "전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")
@@ -1077,7 +1121,7 @@ class DiffDetailScreen(tk.Frame):
         path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
             filetypes=[("Excel 파일", "*.xlsx")],
-            initialfile=f"재고조사차이내역{self._ktag()}{mode_tag}_{today_str()}.xlsx",
+            initialfile=f"재고조사차이내역{self._ktag()}{mode_tag}_{file_date(self.app)}.xlsx",
         )
         if not path:
             return
@@ -1142,7 +1186,7 @@ class DiffDetailScreen(tk.Frame):
         싶을 때 사용)."""
         rows = self._build_full_rows()
         if not rows:
-            messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
+            messagebox.showinfo("알림", "저장할 데이터가 없습니다." if self._queried else "저장할 데이터가 없습니다. 먼저 [조회]를 누르세요.")
             return
         headers = ("도서명", "바코드", "AREA", "SECTION", "단", "열", "서가번호",
                   "전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")
@@ -1156,7 +1200,7 @@ class DiffDetailScreen(tk.Frame):
         path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
             filetypes=[("Excel 파일", "*.xlsx")],
-            initialfile=f"재고조사차이내역_발행양식{self._ktag()}{mode_tag}_{today_str()}.xlsx",
+            initialfile=f"재고조사차이내역_발행양식{self._ktag()}{mode_tag}_{file_date(self.app)}.xlsx",
         )
         if not path:
             return
@@ -1209,7 +1253,7 @@ class DiffDetailScreen(tk.Frame):
         그대로 써서 인쇄물도 화면/엑셀저장과 똑같은 디자인으로 나온다."""
         rows = self._build_full_rows()
         if not rows:
-            messagebox.showinfo("알림", "인쇄할 데이터가 없습니다.")
+            messagebox.showinfo("알림", "인쇄할 데이터가 없습니다." if self._queried else "인쇄할 데이터가 없습니다. 먼저 [조회]를 누르세요.")
             return
         headers = ("도서명", "바코드", "AREA", "SECTION", "단", "열", "서가번호",
                   "전산재고", "실재고", "누락재고", "예외여부", "실사수량", "차이수량", "비고")
@@ -1218,7 +1262,7 @@ class DiffDetailScreen(tk.Frame):
         from datetime import datetime as _dt
         tmp_dir = os.path.join(tempfile.gettempdir(), "kointbook_print")
         os.makedirs(tmp_dir, exist_ok=True)
-        path = os.path.join(tmp_dir, f"{_dt.now().strftime('%Y%m%d_%H%M%S_%f')}_재고조사차이내역_{today_str()}.xlsx")
+        path = os.path.join(tmp_dir, f"{_dt.now().strftime('%Y%m%d_%H%M%S_%f')}_재고조사차이내역_{file_date(self.app)}.xlsx")
 
         # [2026-09-29] "발행시 이 양식으로 출력, 페이지마다 상단/헤더는
         # 고정, 페이지수는 변동값, 하단 (주)코인트써비스도 고정" - [발행]에서
@@ -1240,7 +1284,7 @@ class DiffDetailScreen(tk.Frame):
             try:
                 _write_diff_detail_workbook(path, rows, headers, report_header=report_header, summary_only=self._summary_only)
             except ImportError:
-                path = print_rows_to_excel(rows, headers, default_name=f"재고조사차이내역{self._ktag()}_{today_str()}.xlsx")
+                path = print_rows_to_excel(rows, headers, default_name=f"재고조사차이내역{self._ktag()}_{file_date(self.app)}.xlsx")
                 if not path:
                     return
             except OSError as e:
@@ -1255,7 +1299,7 @@ class DiffDetailScreen(tk.Frame):
                 _write_diff_detail_workbook(path, rows, headers, progress=progress, report_header=report_header, summary_only=self._summary_only)
                 return path
             except ImportError:
-                return print_rows_to_excel(rows, headers, default_name=f"재고조사차이내역{self._ktag()}_{today_str()}.xlsx")
+                return print_rows_to_excel(rows, headers, default_name=f"재고조사차이내역{self._ktag()}_{file_date(self.app)}.xlsx")
 
         def on_done(result, error):
             if isinstance(error, Cancelled):

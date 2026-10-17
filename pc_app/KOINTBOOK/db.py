@@ -86,6 +86,12 @@ MISS_TYPES = [
 ]
 MISS_TYPE_OWNER = dict(MISS_TYPES)
 
+# [2026-10-16] 샘플링 자료등록의 "미스없음": 샘플링으로 다시 세어 봤는데 미스가 없던 SECTION을 등록하는 항목.
+# 샘플링 결과보고서는 등록된 SECTION만 줄로 만들기 때문에, 미스가 없는 SECTION은 지금까지 등록할 방법이 없어
+# 보고서에서 빠졌다. 이 항목으로 등록하면 미스수량/건수 0으로 저장돼 TOT(실사 수량/건수)만 잡히고 미스는 0이다.
+# 보고서 칸(미스유형 열)은 MISS_TYPES로 만들어지므로 여기에 넣지 않고 따로 둔다(책임 소재도 없음).
+NO_MISS_TYPE = "미스없음"
+
 
 # ---- DB 변경 번호 (data_version) --------------------------------------------
 # get_conn()으로 연 연결이 실제로 데이터를 바꾸고(INSERT/UPDATE/DELETE) 커밋하거나
@@ -95,6 +101,13 @@ MISS_TYPE_OWNER = dict(MISS_TYPES)
 # 작업은 번호를 올리지 않는다(sqlite total_changes 기준).
 _data_version = 0
 _data_version_lock = threading.Lock()
+
+
+def worker_code_sort_key(code):
+    """[2026-10-16] "작업자코드로 정렬 숫자가 뒤죽박죽" - 작업자코드는 글자로 저장돼 있어 ORDER BY로 정렬하면
+    1, 10, 11, 2, 3 순이 된다. 숫자 코드는 크기순(1, 2, 3, 10, 11), 숫자가 아닌 코드는 그 뒤에 글자순."""
+    c = str(code or "").strip()
+    return (0, int(c), c) if c.isdigit() else (1, 0, c)
 
 
 def data_version():
@@ -332,13 +345,13 @@ def init_db():
     _add_column_if_missing(cur, "books", "real_qty", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "books", "missing_qty", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "books", "except_flag", "TEXT DEFAULT 'N'")
-    # [2026-10-13] 서적/문구 마스터 분리: 두 양식이 달라서 같은 표에 구분(kind)으로 같이 담는다.
-    #  kind      = '서적' | '문구' (옛 DB의 기존 행은 모두 '서적')
+    # [2026-10-13] 도서/문구 마스터 분리: 두 양식이 달라서 같은 표에 구분(kind)으로 같이 담는다.
+    #  kind      = '도서' | '문구' (옛 DB의 기존 행은 모두 '도서', 2026-10-17 전에는 '서적'이었다)
     #  price     = 문구 상품마스터 sale_unpr (납품 상세 자료의 단가)
     #  dvsn_code = 문구 상품마스터 cmdt_dvsn_code (401/402/403 - 납품 상세 자료의 구분코드)
     #  kind_code = 문구 상품마스터 cmdt_code_kind_code (502 - 납품 상세 자료의 종류코드)
     for _tbl in ("books", "ledger_master"):
-        _add_column_if_missing(cur, _tbl, "kind", "TEXT DEFAULT '서적'")
+        _add_column_if_missing(cur, _tbl, "kind", "TEXT DEFAULT '도서'")
         _add_column_if_missing(cur, _tbl, "price", "INTEGER DEFAULT 0")
         _add_column_if_missing(cur, _tbl, "dvsn_code", "TEXT DEFAULT ''")
         _add_column_if_missing(cur, _tbl, "kind_code", "TEXT DEFAULT ''")
@@ -347,7 +360,8 @@ def init_db():
         _add_column_if_missing(cur, _tbl, "real_x", "INTEGER DEFAULT 0")
         _add_column_if_missing(cur, _tbl, "missing_x", "INTEGER DEFAULT 0")
         _add_column_if_missing(cur, _tbl, "rdp_code", "TEXT DEFAULT ''")  # 문구 상품마스터 rdp_code(납품처) - 파일 값 그대로
-        cur.execute(f"UPDATE {_tbl} SET kind='서적' WHERE kind IS NULL OR kind=''")
+        # [2026-10-17] "서적"을 "도서"로 바꿨다: 예전 구분 값 '서적'(옛 DB·옛 백업)도 '도서'로 바꿔 둔다.
+        cur.execute(f"UPDATE {_tbl} SET kind='도서' WHERE kind IS NULL OR kind='' OR kind='서적'")
     conn.commit()
 
     # 실사 데이터가 수십만 건이어도 (점포+조사일자) 조회와 AREA/SECTION/서가/단/열 정렬이
@@ -358,13 +372,10 @@ def init_db():
                 "(store_code, survey_date, isbn)")
     conn.commit()
 
-    # 데모용 샘플 점포/작업자 (없을 때만 삽입)
-    cur.execute("SELECT COUNT(*) FROM stores")
-    if cur.fetchone()[0] == 0:
-        cur.executemany(
-            "INSERT INTO stores(store_code, store_name) VALUES (?,?)",
-            [("KYOBO01", "교보문고 광화문점")]
-        )
+    # [2026-10-16] "프로그램 점포코드, 점포명 기초값 광화문이 아니라 아무것도 없게 해줘" - 데모용 점포(KYOBO01 / 교보문고 광화문점)는
+    # 더 이상 넣지 않는다. 예전 버전이 넣어둔 데모 점포는 그 점포로 받은 자료가 하나도 없을 때만 지운다.
+    _remove_untouched_demo_store(cur)
+    # 데모용 샘플 작업자 (없을 때만 삽입)
     cur.execute("SELECT COUNT(*) FROM workers")
     if cur.fetchone()[0] == 0:
         cur.executemany(
@@ -373,6 +384,27 @@ def init_db():
         )
     conn.commit()
     conn.close()
+
+
+_DEMO_STORE = ("KYOBO01", "교보문고 광화문점")
+_STORE_DATA_TABLES = ("books", "ledger_master", "exceptions", "stock_counts", "dup_ack",
+                      "section_printed", "planned_sections", "area_sum", "sampling_miss")
+
+
+def _remove_untouched_demo_store(cur):
+    """예전 버전이 처음 실행할 때 넣어둔 데모 점포(KYOBO01 / 교보문고 광화문점)를 지운다 - 이름을 바꿨거나 그 점포로
+    받은 자료(마스터·실사·합산 등)가 하나라도 있으면 그대로 둔다. 마지막으로 쓰던 점포가 그 데모 점포였으면 그 기억도 비운다."""
+    try:
+        if not cur.execute("SELECT 1 FROM stores WHERE store_code=? AND store_name=?", _DEMO_STORE).fetchone():
+            return
+        for t in _STORE_DATA_TABLES:
+            if cur.execute(f"SELECT 1 FROM {t} WHERE store_code=? LIMIT 1", (_DEMO_STORE[0],)).fetchone():
+                return
+        cur.execute("DELETE FROM stores WHERE store_code=?", (_DEMO_STORE[0],))
+        cur.execute("DELETE FROM app_settings WHERE (key='last_store_code' AND value=?) OR (key='last_store_name' AND value=?)",
+                    _DEMO_STORE)
+    except sqlite3.Error:
+        pass  # 표 이름이 달라 확인이 안 되면 건드리지 않는다
 
 
 def get_setting(key, default=None):

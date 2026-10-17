@@ -52,7 +52,7 @@ from .masters import disp_qty, disp_exc
 from .ui_common import (
     center_on_app,
     COLOR_HEADER_BG, setup_treeview, read_excel_columns, read_csv_columns, export_rows_to_excel,
-    today_str, open_calendar_picker, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
+    file_date, open_calendar_picker, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
 )
 
 # 점포코드/점포명을 "값을 보여주기만 하는" 굵은 글씨 칸으로 그릴 때 쓰는
@@ -98,10 +98,10 @@ class ProductMasterScreen(tk.Frame):
         # [2026-09-23 정정] "파일선택변환"을 조사일자 바로 옆으로 옮기고(전에는
         # 아래 조회 줄에 있었다), PDA전송과는 간격을 좀 더 두어 "불러오기"
         # 계열과 "전송" 버튼이 헷갈리지 않게 구분했다.
-        # [2026-10-13] 서적/문구는 파일 양식이 달라서 불러오기 버튼을 둘로 나눴다(각각 같은 구분만 교체).
+        # [2026-10-13] 도서/문구는 파일 양식이 달라서 불러오기 버튼을 둘로 나눴다(각각 같은 구분만 교체).
         imp = tk.Frame(top, bg=COLOR_HEADER_BG)
         imp.grid(row=0, column=7, padx=(80, 12))
-        win_button(imp, text="서적 불러오기", command=lambda: self.import_kind("서적"), kind="normal").pack(side=tk.LEFT, padx=(0, 30))
+        win_button(imp, text="도서 불러오기", command=lambda: self.import_kind("도서"), kind="normal").pack(side=tk.LEFT, padx=(0, 30))
         win_button(imp, text="문구 불러오기", command=lambda: self.import_kind("문구"), kind="normal").pack(side=tk.LEFT)
 
         # ---- 조회 줄 ----
@@ -114,7 +114,7 @@ class ProductMasterScreen(tk.Frame):
         self.e_search.pack(side=tk.LEFT, padx=(8, 4), ipady=2)
         self.e_search.bind("<Return>", lambda ev: self.refresh())
         tk.Label(search_row, text="구분", bg=CL_BG, fg=CL_TEXT_DIM).pack(side=tk.LEFT, padx=(14, 4))
-        self.cb_kind = ttk.Combobox(search_row, values=("전체", "서적", "문구"), state="readonly", width=6)
+        self.cb_kind = ttk.Combobox(search_row, values=("전체", "도서", "문구"), state="readonly", width=6)
         self.cb_kind.set("전체")
         self.cb_kind.pack(side=tk.LEFT)
         self.cb_kind.bind("<<ComboboxSelected>>", lambda e: self.refresh())
@@ -144,7 +144,7 @@ class ProductMasterScreen(tk.Frame):
         bottom.pack(fill=tk.X, padx=8, pady=8)
         self.lbl_count = tk.Label(bottom, text="0 개의 자료 검색이 완료되었습니다.", bg=CL_BG)
         self.lbl_count.pack(side=tk.LEFT)
-        # [2026-10-13] 오른쪽 아래 [상품마스터 초기화] - 선택한 점포의 상품마스터(서적+문구)를 모두 비운다.
+        # [2026-10-13] 오른쪽 아래 [상품마스터 초기화] - 선택한 점포의 상품마스터(도서+문구)를 모두 비운다.
         # [2026-10-15] 글씨는 빨강, [엑셀저장]은 그 왼쪽에 간격을 두고 둔다([새로고침]은 [조회]와 같아서 삭제).
         win_button(bottom, text="상품마스터 초기화", command=self.reset_master, kind="danger").pack(side=tk.RIGHT)
         win_button(bottom, text="엑셀저장", command=self.export_excel, kind="accent").pack(side=tk.RIGHT, padx=(0, 30))
@@ -242,7 +242,7 @@ class ProductMasterScreen(tk.Frame):
                "FROM books WHERE store_code=?")
         params = [store_code]
         kind_sel = self.cb_kind.get()
-        if kind_sel in ("서적", "문구"):
+        if kind_sel in ("도서", "문구"):
             sql += " AND kind=?"
             params.append(kind_sel)
         if keyword:
@@ -273,7 +273,7 @@ class ProductMasterScreen(tk.Frame):
             rcds_qty = disp_qty(rcds_qty, b["rcds_x"])
             real_qty = disp_qty(real_qty, b["real_x"])
             missing_qty = disp_qty(missing_qty, b["missing_x"])
-            rows.append((b["kind"] or "서적", b["isbn"], b["book_name"], b["category"], b["publisher"],
+            rows.append((b["kind"] or "도서", b["isbn"], b["book_name"], b["category"], b["publisher"],
                         rcds_qty, real_qty, missing_qty, is_exc))
         self._view_rows_cache = rows
         self._view_total = len(rows)
@@ -326,20 +326,20 @@ class ProductMasterScreen(tk.Frame):
     ]
 
     def import_kind(self, kind):
-        """[서적 불러오기]/[문구 불러오기] - 양식이 서로 달라서 구분을 먼저 고르고 파일을 연다
+        """[도서 불러오기]/[문구 불러오기] - 양식이 서로 달라서 구분을 먼저 고르고 파일을 연다
         (masters.py 참고). 같은 점포의 같은 구분만 교체한다."""
         from .masters_ui import import_master_dialog
         import_master_dialog(self, "books", "상품마스터", kind)
 
     def reset_master(self):
-        """선택한 점포의 상품마스터(서적+문구)를 전부 삭제한다. 장부마스터·실사자료는 건드리지 않는다."""
+        """선택한 점포의 상품마스터(도서+문구)를 전부 삭제한다. 장부마스터·실사자료는 건드리지 않는다."""
         store_code = self.app.state.store_code
         if not store_code:
             messagebox.showinfo("알림", "점포를 먼저 선택하세요.")
             return
         conn = dbmod.get_conn()
         try:
-            cnt = {r[0] or "서적": r[1] for r in conn.execute(
+            cnt = {r[0] or "도서": r[1] for r in conn.execute(
                 "SELECT kind, COUNT(*) FROM books WHERE store_code=? GROUP BY kind", (store_code,))}
         finally:
             conn.close()
@@ -369,7 +369,7 @@ class ProductMasterScreen(tk.Frame):
             messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
             return
         headers = ("구분", "바코드", "도서명", "분야명", "출판사", "전산재고", "실재고", "누락재고", "예외여부")
-        path = export_rows_to_excel(self._view_rows_cache, headers, default_name=f"상품마스터_{today_str()}.xlsx", parent=self)
+        path = export_rows_to_excel(self._view_rows_cache, headers, default_name=f"상품마스터_{file_date(self.app)}.xlsx", parent=self)
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")
 

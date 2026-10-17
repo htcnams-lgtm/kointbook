@@ -110,12 +110,14 @@ class AppState:
     자체가 엉뚱했던 것). 이제 마지막으로 쓰던 점포/조사일자를 DB 안
     app_settings에 저장해두고, 켤 때 그 값부터 읽어온다(DB 파일 안에
     있으니 백업/복원해도 같이 백업/복원된다) - 저장된 값이 없으면(처음
-    설치했을 때) 예전처럼 KYOBO01/오늘 날짜로 시작한다."""
+    설치했을 때) 점포코드·점포명은 빈칸, 조사일자는 오늘 날짜로 시작한다."""
     def __init__(self):
         from KOINTBOOK import db as dbmod
         from KOINTBOOK.ui_common import today_str
-        self.store_code = dbmod.get_setting("last_store_code", "KYOBO01")
-        self.store_name = dbmod.get_setting("last_store_name", "교보문고 광화문점")
+        # [2026-10-16] "프로그램 점포코드, 점포명 기초값 광화문이 아니라 아무것도 없게 해줘" - 저장된 값이 없으면 빈칸으로 시작한다
+        # (점포를 고르기 전까지는 점포코드·점포명이 비어 있다. 예전 KYOBO01 / 교보문고 광화문점 기본값은 없앴다).
+        self.store_code = dbmod.get_setting("last_store_code", "") or ""
+        self.store_name = dbmod.get_setting("last_store_name", "") or ""
         self.survey_date = dbmod.get_setting("last_survey_date", today_str())
 
     def save(self):
@@ -400,7 +402,9 @@ class KointBookPcApp:
                       and getattr(frame, "_show_key", None) == key + (dbmod.data_version(),))
             if not cached:
                 try:
-                    frame.refresh()
+                    # [2026-10-16] 열리는 데 오래 걸리는 조회 화면(섹션별 아이템 재고현황, 재고조사 차이내역)은 들어올 때 자동으로
+                    # 조회하지 않고 빈 화면으로 둔다(clear_view). [조회]를 눌러야 조회된다. 나머지 화면은 예전처럼 refresh.
+                    (getattr(frame, "clear_view", None) or frame.refresh)()
                 except Exception:
                     pass
                 frame._show_key = key + (dbmod.data_version(),)

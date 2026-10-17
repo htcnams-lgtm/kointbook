@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2026 namsman. All rights reserved.
 # KOINTBOOK 재고실사 관리 시스템 - 무단 복제 및 배포를 금합니다.
-"""상품마스터/장부마스터 화면이 같이 쓰는 [서적 불러오기]/[문구 불러오기] 동작."""
+"""상품마스터/장부마스터 화면이 같이 쓰는 [도서 불러오기]/[문구 불러오기] 동작."""
 
 from tkinter import filedialog, messagebox
 from . import db as dbmod
@@ -12,7 +12,7 @@ from .progress_dialog import run_with_progress
 
 def import_master_dialog(screen, table, label, kind):
     """screen: 상품/장부마스터 화면(app, refresh() 필요). table: 'books'|'ledger_master'.
-    label: '상품마스터'|'장부마스터'. kind: '서적'|'문구'."""
+    label: '상품마스터'|'장부마스터'. kind: '도서'|'문구'."""
     app = screen.app
     store_code = app.state.store_code
     date = app.state.survey_date

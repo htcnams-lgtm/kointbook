@@ -19,7 +19,7 @@ from . import db as dbmod
 from . import generation
 from . import scope
 from .scope_ui import ScopeBar
-from .ui_common import setup_treeview, today_str, write_rows_to_excel_file, export_rows_to_excel, print_rows_to_excel, print_excel_file, CL_BG, win_button
+from .ui_common import setup_treeview, file_date, write_rows_to_excel_file, export_rows_to_excel, print_rows_to_excel, print_excel_file, CL_BG, win_button
 
 
 SRC_LIKE = generation.AREA_SRC_PREFIX + "%"
@@ -56,7 +56,7 @@ class AreaSumScreen(tk.Frame):
         self.lbl_sel = tk.Label(sel, text="선택 0개", bg=CL_BG)
         self.lbl_sel.pack(side=tk.RIGHT)
 
-        # [2026-10-13] 서적/문구 구분(AREA·SECTION 범위). 합산 목록·출력·엑셀저장·자료생성에 적용.
+        # [2026-10-13] 도서/문구 구분(AREA·SECTION 범위). 합산 목록·출력·엑셀저장·자료생성에 적용.
         srow = tk.Frame(self, bg=CL_BG)
         srow.pack(fill=tk.X, padx=8, pady=(4, 0))
         self.bar = ScopeBar(srow, on_change=self.refresh)
@@ -91,10 +91,10 @@ class AreaSumScreen(tk.Frame):
 
         gen_row = tk.Frame(self, bg=CL_BG)
         gen_row.pack(fill=tk.X, padx=8, pady=(4, 10))
-        win_button(gen_row, text="서적 자료①,②생성", command=self.generate_1_2, kind="normal").pack(side=tk.LEFT)
-        win_button(gen_row, text="서적 ③ 단품 리스트생성", command=self.generate_item_list, kind="normal").pack(side=tk.LEFT, padx=6)
-        win_button(gen_row, text="서적 ④ 서가별 생성", command=self.generate_shelf, kind="normal").pack(side=tk.LEFT, padx=6)
-        win_button(gen_row, text="문구 납품자료 생성", command=self.generate_stat, kind="normal").pack(side=tk.LEFT, padx=6)
+        win_button(gen_row, text="도서 자료①,②생성", command=self.generate_1_2, kind="normal").pack(side=tk.LEFT)
+        win_button(gen_row, text="도서 ③ 단품 리스트생성", command=self.generate_item_list, kind="normal").pack(side=tk.LEFT, padx=6)
+        win_button(gen_row, text="도서 ④ 서가별 생성", command=self.generate_shelf, kind="normal").pack(side=tk.LEFT, padx=6)
+        win_button(gen_row, text="문구 자료 생성", command=self.generate_stat, kind="normal").pack(side=tk.LEFT, padx=6)
         win_button(gen_row, text="자료생성(미등록)", command=self.generate_unregistered, kind="normal").pack(side=tk.LEFT, padx=6)
 
     def _select_scope_areas(self):
@@ -129,7 +129,7 @@ class AreaSumScreen(tk.Frame):
         if not data:
             messagebox.showinfo("알림", "저장할 합산 자료가 없습니다. 먼저 [합산]을 하세요.")
             return
-        path = export_rows_to_excel(data, headers, default_name=f"AREA별합산{self._ktag()}_{today_str()}.xlsx", parent=self)
+        path = export_rows_to_excel(data, headers, default_name=f"AREA별합산{self._ktag()}_{file_date(self.app)}.xlsx", parent=self)
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")
 
@@ -138,7 +138,7 @@ class AreaSumScreen(tk.Frame):
         if not data:
             messagebox.showinfo("알림", "출력할 합산 자료가 없습니다. 먼저 [합산]을 하세요.")
             return
-        path = print_rows_to_excel(data, headers, default_name=f"AREA별합산{self._ktag()}_{today_str()}.xlsx")
+        path = print_rows_to_excel(data, headers, default_name=f"AREA별합산{self._ktag()}_{file_date(self.app)}.xlsx")
         if path:
             print_excel_file(path)
 
@@ -311,7 +311,7 @@ class AreaSumScreen(tk.Frame):
         conn.close()
         self.refresh()
 
-    def _generate_to_folder(self, headers, rows, filename, label, kind="서적"):
+    def _generate_to_folder(self, headers, rows, filename, label, kind="도서"):
         if not rows:
             messagebox.showinfo("알림", f"{label}: 생성할 데이터가 없습니다.")
             return
@@ -324,18 +324,18 @@ class AreaSumScreen(tk.Frame):
         messagebox.showinfo("완료", f"{label} 파일이 생성되었습니다:\n{out_path}")
 
     def generate_1_2(self):
-        out_dir = generation.output_dir(self.app, "서적")
+        out_dir = generation.output_dir(self.app, "도서")
         results = generation.generate_kyobo_data_1_2(self.app, out_dir)
         summary = "\n".join(f"{name} ({count:,}건)" for name, count in results)
-        messagebox.showinfo("완료", f"서적 자료①,② 파일이 생성되었습니다:\n{out_dir}\n\n{summary}")
+        messagebox.showinfo("완료", f"도서 자료①,② 파일이 생성되었습니다:\n{out_dir}\n\n{summary}")
 
     def generate_item_list(self):
         headers, rows = generation.item_list_rows(self.app)
-        self._generate_to_folder(headers, rows, generation.item_list_filename(self.app, "서적"), "서적 단품 리스트(결과확인리스트)")
+        self._generate_to_folder(headers, rows, generation.item_list_filename(self.app, "도서"), "도서 단품 리스트(결과확인리스트)")
 
     def generate_shelf(self):
         headers, rows = generation.shelf_rows(self.app)
-        self._generate_to_folder(headers, rows, generation.shelf_filename(self.app, "서적"), "서적 서가별 자료(서가별스캔데이터)")
+        self._generate_to_folder(headers, rows, generation.shelf_filename(self.app, "도서"), "도서 서가별 자료(서가별스캔데이터)")
 
     def generate_stat(self):
         out_dir = generation.output_dir(self.app, "문구")
@@ -344,12 +344,12 @@ class AreaSumScreen(tk.Frame):
             messagebox.showinfo("알림", "문구 실사 자료가 없습니다. (구분 범위 또는 문구 상품마스터를 확인하세요)")
             return
         summary = "\n".join(f"{name} ({count:,}건)" for name, count in results)
-        messagebox.showinfo("완료", f"문구 납품자료가 생성되었습니다:\n{out_dir}\n\n{summary}")
+        messagebox.showinfo("완료", f"문구 자료가 생성되었습니다(납품 txt·xlsx, 로케이션별스캔데이터, 결과확인리스트):\n{out_dir}\n\n{summary}")
 
     def generate_unregistered(self):
         kind = self.bar.kind()
         headers, rows = generation.unregistered_rows(self.app)
         if kind in scope.KINDS:
             rows = [r for r in rows if scope.matches(kind, r[0], r[1])]  # r[0]=AREA, r[1]=SECTION
-        self._generate_to_folder(headers, rows, f"미등록상품자료{self._ktag()}_{today_str()}.xlsx", "미등록상품 자료",
-                                 kind if kind in scope.KINDS else "서적")
+        self._generate_to_folder(headers, rows, f"미등록상품자료{self._ktag()}_{file_date(self.app)}.xlsx", "미등록상품 자료",
+                                 kind if kind in scope.KINDS else "도서")

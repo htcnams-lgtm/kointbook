@@ -2,26 +2,26 @@
 # Copyright (c) 2026 namsman. All rights reserved.
 # KOINTBOOK 재고실사 관리 시스템 - 무단 복제 및 배포를 금합니다.
 """
-서적/문구 구분. [2026-10-15 개편] 예전에는 자료생성 화면마다 [범위설정]으로 AREA/SECTION 범위를
+도서/문구 구분. [2026-10-15 개편] 예전에는 자료생성 화면마다 [범위설정]으로 AREA/SECTION 범위를
 정했지만, 이제 AREA 번호로 고정한다(PDA·PC 공통):
 
-    서적 : AREA 10~19, 90~99
+    도서 : AREA 10~19, 90~99
     문구 : AREA 20~29, 80~89
     그 외 AREA는 쓸 수 없다(PDA 위치입력, PC 실적관리 등록/수정에서 경고 후 불가).
 
 문구는 서가번호가 없어 PDA가 고정값 X로 저장한다. SECTION은 구분에 쓰지 않는다.
-재고조사 보고서·차이내역·자료생성·AREA별 합산의 [구분: 전체/서적/문구]는 이 기준으로
+재고조사 보고서·차이내역·자료생성·AREA별 합산의 [구분: 전체/도서/문구]는 이 기준으로
 조회·출력·생성한다. (함수 이름과 인자는 예전과 같게 두어 화면 코드는 그대로 쓴다.)
 """
 
-KINDS = ("서적", "문구")
+KINDS = ("도서", "문구")
 FIELDS = ("af", "at", "sf", "st")  # (예전 호환용, 쓰지 않음)
 
 AREA_RANGES = {
-    "서적": ((10, 19), (90, 99)),
+    "도서": ((10, 19), (90, 99)),
     "문구": ((20, 29), (80, 89)),
 }
-AREA_RULE_TEXT = "서적 10~19, 90~99 / 문구 20~29, 80~89"
+AREA_RULE_TEXT = "도서 10~19, 90~99 / 문구 20~29, 80~89"
 STATIONERY_SHELF_NO = "X"
 
 
@@ -31,7 +31,7 @@ def _area_num(area):
 
 
 def kind_of_area(area):
-    """AREA로 '서적' | '문구' | None(허용되지 않는 AREA)."""
+    """AREA로 '도서' | '문구' | None(허용되지 않는 AREA)."""
     a = _area_num(area)
     if a is None:
         return None
@@ -54,7 +54,7 @@ def is_defined(kind):
 
 
 def classify(area, section=None):
-    """'서적' | '문구' | None(허용 안 되는 AREA — 예전에 입력된 자료일 수 있음)."""
+    """'도서' | '문구' | None(허용 안 되는 AREA — 예전에 입력된 자료일 수 있음)."""
     return kind_of_area(area)
 
 
@@ -90,6 +90,16 @@ def describe(kind):
     return "AREA " + ", ".join(f"{lo}~{hi}" for lo, hi in rs) if rs else ""
 
 
+# [2026-10-17] "서적"을 모두 "도서"로 바꾸면서 파일 이름 속 표시도 서적전용 -> 도서전용으로 바꿨다(처음엔 파일 이름은 그대로 두라고
+# 해서 서적전용을 유지했다가, "서적전용도 도서전용으로"라는 요청으로 바꿈). 문구는 그대로 문구전용.
+FILE_TAGS = {"도서": "도서전용", "문구": "문구전용"}
+
+
 def tag(kind):
-    """파일명에 붙일 표시: 서적전용 / 문구전용 / ''(전체)"""
-    return f"{kind}전용" if kind in KINDS else ""
+    """파일명에 붙일 표시: 도서전용 / 문구전용 / ''(전체)."""
+    return FILE_TAGS.get(kind, "")
+
+
+def folder(kind):
+    """자료생성 저장 하위 폴더 이름: 도서 / 문구 (2026-10-17 '전용'을 뺌)."""
+    return kind if kind in KINDS else ""

@@ -82,7 +82,10 @@ class WorkerMasterScreen(tk.Frame):
             self.tree.delete(item)
         conn = dbmod.get_conn()
         codes = set()
-        for i, row in enumerate(conn.execute("SELECT worker_code, worker_name FROM workers ORDER BY worker_code")):
+        # [2026-10-16] 작업자코드는 숫자 크기순(1, 2, 10)으로 정렬한다(글자 정렬이면 1, 10, 11, 2 순).
+        rows = sorted(conn.execute("SELECT worker_code, worker_name FROM workers"),
+                      key=lambda r: dbmod.worker_code_sort_key(r["worker_code"]))
+        for i, row in enumerate(rows):
             code = row["worker_code"]
             codes.add(code)
             self.tree.insert("", tk.END, values=("☑" if code in self.checked else "☐", code, row["worker_name"]),

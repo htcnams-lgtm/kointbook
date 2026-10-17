@@ -11,7 +11,7 @@ import tkinter as tk
 from tkinter import messagebox
 from . import db as dbmod
 from .virtual_table import VirtualList, ListModel
-from .ui_common import setup_treeview, export_rows_to_excel, today_str, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
+from .ui_common import setup_treeview, export_rows_to_excel, file_date, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
 
 # [2026-09-28] "프로그램 전체 목록이 렉 없이" - 이 화면은 수량 필터를
 # 비워두면(이상치 확인 전, 필터를 아직 안 걸었을 때) stock_counts 전체를
@@ -129,6 +129,6 @@ class OutlierCheckScreen(tk.Frame):
             messagebox.showinfo("알림", "저장할 데이터가 없습니다. 먼저 [조회]를 눌러주세요.")
             return
         headers = ("AREA", "SECTION", "단", "열", "바코드", "상품명", "수량")
-        path = export_rows_to_excel(self._rows, headers, default_name=f"이상치체크확인_{today_str()}.xlsx", parent=self)
+        path = export_rows_to_excel(self._rows, headers, default_name=f"이상치체크확인_{file_date(self.app)}.xlsx", parent=self)
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")

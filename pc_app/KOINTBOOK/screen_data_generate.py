@@ -13,7 +13,9 @@ from .virtual_table import VirtualList, IdListModel
 from . import generation
 from . import scope
 from .scope_ui import ScopeBar
-from .ui_common import setup_treeview, export_rows_to_excel, write_rows_to_excel_file, today_str, \
+from .progress_core import Cancelled
+from .progress_dialog import run_with_progress
+from .ui_common import setup_treeview, export_rows_to_excel, write_rows_to_excel_file, file_date, \
     CL_BG, CL_NAVY, CL_TEXT_DIM, win_button, split_scan_datetime
 
 
@@ -62,9 +64,9 @@ class DataGenerateScreen(tk.Frame):
 
         tk.Frame(self, bg="#C4C8D0", height=1).pack(fill=tk.X, padx=12, pady=(0, 8))
 
-        # ---- [2026-10-13] 생성 패널: 서적 / 문구 카드 ------------------------------------
-        # 서적과 문구는 만드는 자료 양식이 달라서 카드 두 장으로 나눴다. 필요한 쪽만 체크해서
-        # 한 번에 만든다(서적만 / 문구만 / 둘 다). 카드 위쪽 숫자는 지금 DB에 있는 스캔 건수라
+        # ---- [2026-10-13] 생성 패널: 도서 / 문구 카드 ------------------------------------
+        # 도서와 문구는 만드는 자료 양식이 달라서 카드 두 장으로 나눴다. 필요한 쪽만 체크해서
+        # 한 번에 만든다(도서만 / 문구만 / 둘 다). 카드 위쪽 숫자는 지금 DB에 있는 스캔 건수라
         # 만들기 전에 "이 구분에 자료가 있는지" 바로 알 수 있다.
         panel = tk.Frame(self, bg=CL_BG)
         panel.pack(fill=tk.X, padx=12, pady=(0, 8))
@@ -73,7 +75,7 @@ class DataGenerateScreen(tk.Frame):
 
         self.var_do_book = tk.BooleanVar(value=True)
         self.var_do_stat = tk.BooleanVar(value=True)
-        self.var_f = {k: tk.BooleanVar(value=True) for k in ("d1", "d2", "list", "shelf", "loc", "det")}
+        self.var_f = {k: tk.BooleanVar(value=True) for k in ("d1", "d2", "list", "shelf", "shelf_sum", *generation.STAT_FILE_KEYS)}
 
         def card(col, title, var_do):
             f = tk.Frame(panel, bg="white", highlightbackground="#C4C8D0", highlightthickness=1)
@@ -86,10 +88,11 @@ class DataGenerateScreen(tk.Frame):
             lbl.pack(side=tk.RIGHT)
             return f, lbl
 
-        fb, self.lbl_book = card(0, "서적 자료", self.var_do_book)
+        fb, self.lbl_book = card(0, "도서 자료", self.var_do_book)
         for key, text in (("d1", "kyobo_data1.txt  (서가번호11 + 바코드13)"),
                           ("d2", "kyobo_data2.txt  (바코드13 + 수량5)"),
                           ("shelf", "서가별스캔데이터.xlsx"),
+                          ("shelf_sum", "서가별스캔데이터(서가별 합산).xlsx  (같은 바코드·같은 서가번호 합산)"),
                           ("list", "결과확인리스트.xlsx  (전산재고 / 스캔재고 / 차이)")):
             tk.Checkbutton(fb, text=text, variable=self.var_f[key], bg="white", anchor="w").pack(fill=tk.X, padx=(28, 8))
         self.var_zero = tk.BooleanVar(value=True)
@@ -99,8 +102,16 @@ class DataGenerateScreen(tk.Frame):
 
         fs, self.lbl_stat = card(1, "문구 자료", self.var_do_stat)
         for key, text in (("loc", "납품로케이션데이터.txt  (위치,바코드,수량)"),
-                          ("det", "납품상세데이터.txt  (날짜,납품처,바코드,수량,구분,단가+종류+위치,페이지,줄,상품명)")):
+                          ("det", "납품상세데이터.txt  (날짜,점포코드,바코드,수량,가격,구분,종류,에리어+로케이션,단,열,상품명)"),
+                          ("loc_x", "납품로케이션데이터.xlsx  (txt와 같은 내용)"),
+                          ("det_x", "납품상세데이터.xlsx  (txt와 같은 내용)"),
+                          ("stat_scan", "로케이션별스캔데이터.xlsx  (바코드+로케이션별 스캔총수량, 로케이션 = 에리어+섹션 5자리)"),
+                          ("stat_list", "결과확인리스트.xlsx  (문구 장부재고 / X·X·X / 스캔재고 / 차이)")):
             tk.Checkbutton(fs, text=text, variable=self.var_f[key], bg="white", anchor="w").pack(fill=tk.X, padx=(28, 8))
+        self.var_zero_stat = tk.BooleanVar(value=True)
+        tk.Checkbutton(fs, text="결과확인리스트에 장부재고·스캔이 모두 0인 품목도 포함", variable=self.var_zero_stat,
+                       bg="white", anchor="w", fg=CL_TEXT_DIM).pack(fill=tk.X, padx=(48, 8))
+        tk.Frame(fs, bg="white", height=6).pack()
 
         go = tk.Frame(self, bg=CL_BG)
         go.pack(fill=tk.X, padx=12, pady=(0, 6))
@@ -139,7 +150,7 @@ class DataGenerateScreen(tk.Frame):
 
     def _update_go_button(self):
         n = int(self.var_do_book.get()) + int(self.var_do_stat.get())
-        self.lbl_go.config(text="" if n else "생성할 구분(서적/문구)을 체크하세요.")
+        self.lbl_go.config(text="" if n else "생성할 구분(도서/문구)을 체크하세요.")
 
     def _row_values(self, no, r):
         """표(Treeview)에 실제로 보여줄 값을 raw row 하나에서 만든다.
@@ -167,15 +178,15 @@ class DataGenerateScreen(tk.Frame):
         keep = (ctx == self._loaded_ctx)
         self._loaded_ctx = ctx
 
-        # 카드 위쪽 건수 미리보기(서적/문구별 스캔 줄 수·바코드 수·수량)
+        # 카드 위쪽 건수 미리보기(도서/문구별 스캔 줄 수·바코드 수·수량)
         try:
             sm = generation.summary(self.app)
-            for key, lbl in (("서적", self.lbl_book), ("문구", self.lbl_stat)):
+            for key, lbl in (("도서", self.lbl_book), ("문구", self.lbl_stat)):
                 n, codes, qty = sm[key]
                 lbl.config(text=f"스캔 {n:,}줄 · 바코드 {codes:,}종 · 수량 {qty:,}" if n else "스캔 자료 없음")
             if not sm["문구마스터"]:
                 self.lbl_stat.config(text=self.lbl_stat.cget("text") + "  (문구 상품마스터 없음)")
-            for kind, lbl in (("서적", self.lbl_book), ("문구", self.lbl_stat)):
+            for kind, lbl in (("도서", self.lbl_book), ("문구", self.lbl_stat)):
                 if scope.is_defined(kind):
                     lbl.config(text=lbl.cget("text") + f"  [{scope.describe(kind)}]")
         except Exception:
@@ -183,7 +194,7 @@ class DataGenerateScreen(tk.Frame):
 
         def build():
             book_rows, stat_rows, _stat = generation.split_counts(self.app)
-            if kind_sel == "서적":
+            if kind_sel == "도서":
                 ids = [r["id"] for r in book_rows]
             elif kind_sel == "문구":
                 ids = [r["id"] for r in stat_rows]
@@ -223,12 +234,12 @@ class DataGenerateScreen(tk.Frame):
             messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
             return
         tag = f"_{scope.tag(kind)}" if kind in scope.KINDS else ""
-        path = export_rows_to_excel(rows, headers, default_name=f"실사자료{tag}_{today_str()}.xlsx")
+        path = export_rows_to_excel(rows, headers, default_name=f"실사자료{tag}_{file_date(self.app)}.xlsx")
         if path:
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")
 
     def print_view(self):
-        """[출력] - 지금 구분(전체/서적/문구) 범위의 실사내역을 인쇄 대화상자로 보낸다."""
+        """[출력] - 지금 구분(전체/도서/문구) 범위의 실사내역을 인쇄 대화상자로 보낸다."""
         from .ui_common import print_rows_to_excel, print_excel_file
         kind = self.bar.kind()
         headers, rows = generation.raw_rows(self.app, kind)
@@ -236,7 +247,7 @@ class DataGenerateScreen(tk.Frame):
             messagebox.showinfo("알림", "출력할 데이터가 없습니다.")
             return
         tag = f"_{scope.tag(kind)}" if kind in scope.KINDS else ""
-        path = print_rows_to_excel(rows, headers, default_name=f"실사자료{tag}_{today_str()}.xlsx")
+        path = print_rows_to_excel(rows, headers, default_name=f"실사자료{tag}_{file_date(self.app)}.xlsx")
         if path:
             print_excel_file(path)
 
@@ -253,74 +264,49 @@ class DataGenerateScreen(tk.Frame):
         messagebox.showinfo("완료", f"{label} 파일이 생성되었습니다:\n{out_path}")
 
     def generate_selected(self):
-        """체크한 서적/문구 자료를 한 번에 만든다."""
-        if not (self.var_do_book.get() or self.var_do_stat.get()):
-            messagebox.showinfo("알림", "생성할 구분(서적/문구)을 체크하세요.")
+        """체크한 도서/문구 자료를 한 번에 만든다.
+        [2026-10-16] "도서자료, 문구자료 동시 생성시 시간이 걸리니 진행률을 보여줄수있나" - 만드는 일은 백그라운드로
+        돌리고 진행률 팝업(몇 번째 파일, 지금 만드는 파일 이름, 경과 시간)을 보여 준다. [취소]하면 다음 파일부터
+        멈추고 이미 만든 파일은 폴더에 남는다."""
+        do_book, do_stat = self.var_do_book.get(), self.var_do_stat.get()
+        if not (do_book or do_stat):
+            messagebox.showinfo("알림", "생성할 구분(도서/문구)을 체크하세요.")
             return
         out_dir = generation.output_dir(self.app)
-        book_dir = generation.output_dir(self.app, "서적")
-        stat_dir = generation.output_dir(self.app, "문구")
-        done, skipped = [], []
-        try:
-            book_rows, stat_rows, stat = generation.split_counts(self.app)
-            if self.var_do_book.get():
-                if not book_rows:
-                    skipped.append("서적: 서적 실사 자료가 없습니다")
-                else:
-                    from .ui_common import write_text_lines_file
-                    if self.var_f["d1"].get():
-                        lines = generation.kyobo_data1_lines(self.app, book_rows)
-                        write_text_lines_file(lines, book_dir / "kyobo_data1.txt")
-                        done.append(("서적전용/kyobo_data1.txt", len(lines)))
-                    if self.var_f["d2"].get():
-                        lines = generation.kyobo_data2_lines(self.app, book_rows)
-                        write_text_lines_file(lines, book_dir / "kyobo_data2.txt")
-                        done.append(("서적전용/kyobo_data2.txt", len(lines)))
-                    if self.var_f["list"].get():
-                        headers, rows = generation.item_list_rows(self.app, include_zero=self.var_zero.get())
-                        write_rows_to_excel_file(rows, headers, book_dir / generation.item_list_filename(self.app, "서적"))
-                        done.append(("서적전용/" + generation.item_list_filename(self.app, "서적"), len(rows)))
-                    if self.var_f["shelf"].get():
-                        headers, rows = generation.shelf_rows(self.app)
-                        write_rows_to_excel_file(rows, headers, book_dir / generation.shelf_filename(self.app, "서적"))
-                        done.append(("서적전용/" + generation.shelf_filename(self.app, "서적"), len(rows)))
-            if self.var_do_stat.get():
-                if not stat_rows:
-                    skipped.append("문구: 문구 실사 자료가 없습니다")
-                else:
-                    enc = "cp949"
-                    if self.var_f["loc"].get():
-                        lines = generation.stat_location_lines(self.app, stat_rows)
-                        from .ui_common import write_text_lines_file
-                        write_text_lines_file(lines, stat_dir / generation.stat_location_filename(self.app))
-                        done.append(("문구전용/" + generation.stat_location_filename(self.app), len(lines)))
-                    if self.var_f["det"].get():
-                        lines = generation.stat_detail_lines(self.app, stat_rows, stat)
-                        generation.write_text_lines(lines, stat_dir / generation.stat_detail_filename(self.app), enc)
-                        done.append(("문구전용/" + generation.stat_detail_filename(self.app), len(lines)))
-                        miss = generation.missing_stat_master(stat_rows, stat)
-                        if miss:
-                            skipped.append(f"참고: 문구 범위의 바코드 {miss:,}종이 문구 상품마스터에 없어 단가·구분코드·납품처가 비어 있습니다")
-        except ImportError:
-            messagebox.showerror("오류", "엑셀 생성을 위해 openpyxl이 필요합니다.\npip install openpyxl")
-            return
-        except Exception as e:  # noqa: BLE001
-            messagebox.showerror("오류", f"자료 생성 중 오류: {e}")
-            return
-        msg = []
-        if done:
-            msg.append(f"저장 위치: {out_dir}  (서적전용 / 문구전용 폴더)\n")
-            msg += [f"  {name}  ({n:,}건)" for name, n in done]
-        if skipped:
-            msg.append("\n확인할 항목")
-            msg += [f"  {t}" for t in skipped]
-        if not done and not skipped:
-            msg.append("선택된 파일이 없습니다.")
-        if done:
-            if messagebox.askyesno("생성 완료", "\n".join(msg) + "\n\n폴더를 열까요?"):
-                self.open_folder()
-        else:
-            messagebox.showinfo("알림", "\n".join(msg))
+        files = {k: v.get() for k, v in self.var_f.items()}   # tkinter 값은 여기(화면 스레드)에서 미리 읽어 둔다
+        zero_book, zero_stat = self.var_zero.get(), self.var_zero_stat.get()
+
+        def work(progress):
+            return generation.generate_selected(self.app, do_book, do_stat, files, zero_book=zero_book,
+                                                zero_stat=zero_stat, progress=progress)
+
+        def finished(result, error):
+            if isinstance(error, Cancelled):
+                messagebox.showinfo("알림", "자료 생성을 취소했습니다. 취소하기 전에 만든 파일은 폴더에 남아 있습니다:\n" + str(out_dir))
+                return
+            if isinstance(error, ImportError):
+                messagebox.showerror("오류", "엑셀 생성을 위해 openpyxl이 필요합니다.\npip install openpyxl")
+                return
+            if error is not None:
+                messagebox.showerror("오류", f"자료 생성 중 오류: {error}")
+                return
+            done, skipped = result
+            msg = []
+            if done:
+                msg.append(f"저장 위치: {out_dir}  (도서 / 문구 폴더)\n")
+                msg += [f"  {name}  ({n:,}건)" for name, n in done]
+            if skipped:
+                msg.append("\n확인할 항목")
+                msg += [f"  {t}" for t in skipped]
+            if not done and not skipped:
+                msg.append("선택된 파일이 없습니다.")
+            if done:
+                if messagebox.askyesno("생성 완료", "\n".join(msg) + "\n\n폴더를 열까요?"):
+                    self.open_folder()
+            else:
+                messagebox.showinfo("알림", "\n".join(msg))
+
+        run_with_progress(self, "자료 생성", work, finished, cancelable=True, initial_message="실사 자료를 불러오는 중...")
 
     def generate_unregistered(self):
         kind = self.bar.kind()
@@ -328,7 +314,7 @@ class DataGenerateScreen(tk.Frame):
         if kind in scope.KINDS:
             rows = [r for r in rows if scope.matches(kind, r[0], r[1])]  # r[0]=AREA, r[1]=SECTION
         tag = f"_{scope.tag(kind)}" if kind in scope.KINDS else ""
-        self._generate_to_folder(headers, rows, f"미등록상품자료{tag}_{today_str()}.xlsx", "미등록상품 자료",
+        self._generate_to_folder(headers, rows, f"미등록상품자료{tag}_{file_date(self.app)}.xlsx", "미등록상품 자료",
                                  kind if kind in scope.KINDS else None)
 
     def generate_area_sum(self):
@@ -337,5 +323,5 @@ class DataGenerateScreen(tk.Frame):
         kind = self.bar.kind()
         headers, rows = generation.raw_rows(self.app, kind)
         tag = f"_{scope.tag(kind)}" if kind in scope.KINDS else ""
-        self._generate_to_folder(headers, rows, f"합산자료_AREA{tag}_{today_str()}.xlsx", "AREA 합산자료(실사내역)",
+        self._generate_to_folder(headers, rows, f"합산자료_AREA{tag}_{file_date(self.app)}.xlsx", "AREA 합산자료(실사내역)",
                                  kind if kind in scope.KINDS else None)

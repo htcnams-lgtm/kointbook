@@ -51,7 +51,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from . import db as dbmod
 from .ui_common import (
-    setup_treeview, export_rows_to_excel, print_rows_to_excel, print_excel_file, today_str,
+    setup_treeview, export_rows_to_excel, print_rows_to_excel, print_excel_file, file_date,
     normalize_area, area_section_code, CL_BG, CL_NAVY, CL_TEXT_DIM, win_button
 )
 
@@ -402,12 +402,12 @@ class SamplingReportScreen(tk.Frame):
         from datetime import datetime as _dt
         tmp_dir = os.path.join(tempfile.gettempdir(), "kointbook_print")
         os.makedirs(tmp_dir, exist_ok=True)
-        path = os.path.join(tmp_dir, f"{_dt.now().strftime('%Y%m%d_%H%M%S_%f')}_샘플링결과보고서_{today_str()}.xlsx")
+        path = os.path.join(tmp_dir, f"{_dt.now().strftime('%Y%m%d_%H%M%S_%f')}_샘플링결과보고서_{file_date(self.app)}.xlsx")
         try:
             self._write_report_excel(path)
         except ImportError:
             path = print_rows_to_excel([self._display_row(r) for r in self._rows], self._flat_headings(),
-                                       default_name=f"샘플링결과보고서_{today_str()}.xlsx")
+                                       default_name=f"샘플링결과보고서_{file_date(self.app)}.xlsx")
             if not path:
                 return
         except OSError as e:
@@ -422,7 +422,7 @@ class SamplingReportScreen(tk.Frame):
         if not self._rows:
             messagebox.showinfo("알림", "저장할 데이터가 없습니다.")
             return
-        default_name = f"샘플링결과보고서_{today_str()}.xlsx"
+        default_name = f"샘플링결과보고서_{file_date(self.app)}.xlsx"
         path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
             filetypes=[("Excel 파일", "*.xlsx")],

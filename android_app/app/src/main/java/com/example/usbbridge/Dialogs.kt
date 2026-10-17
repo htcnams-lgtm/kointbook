@@ -289,6 +289,92 @@ object Dialogs {
         dialog.show()
     }
 
+    /**
+     * [2026-10-16] 도서 AREA에 문구 상품(또는 문구 AREA에 도서 상품)을 입력하려 할 때 띄우는
+     * 큰 빨간 경고창. 확인 버튼(물리 엔터)을 눌러야만 닫히고, 닫히기 전에는 뒤로가기/바깥 터치로도
+     * 닫히지 않는다. 막 뜬 직후(0.6초)에는 스캐너가 이어서 보낸 엔터/연속 스캔으로 바로 닫히지 않게
+     * 확인을 무시한다. 닫히면 onClosed를 부른다.
+     */
+    fun kindBlock(activity: Activity, headline: String, detail: String, onClosed: () -> Unit) {
+        val root = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(activity.dp(14), activity.dp(14), activity.dp(14), activity.dp(14))
+        }
+        val banner = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+            setPadding(activity.dp(8), activity.dp(16), activity.dp(8), activity.dp(16))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.parseColor("#C62828"))
+                cornerRadius = activity.dp(8).toFloat()
+            }
+        }
+        banner.addView(TextView(activity).apply {
+            text = headline
+            textSize = 28f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(Color.parseColor("#FFFFFF"))
+            gravity = android.view.Gravity.CENTER
+        })
+        banner.addView(TextView(activity).apply {
+            text = "입력 금지"
+            textSize = 20f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(Color.parseColor("#FFFFFF"))
+            gravity = android.view.Gravity.CENTER
+        })
+        root.addView(banner, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = activity.dp(12) })
+        root.addView(TextView(activity).apply {
+            text = detail
+            textSize = 16f
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 0, 0, activity.dp(14))
+        })
+
+        val btnOk = Button(activity).apply {
+            text = "확인"
+            textSize = 17f
+            setTextColor(Color.parseColor("#FFFFFF"))
+            background = ContextCompat.getDrawable(activity, R.drawable.button_classic)
+        }
+        root.addView(btnOk, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, activity.dp(46)))
+
+        val dialog = AlertDialog.Builder(activity, R.style.KointBookDialog)
+            .setView(root)
+            .setCancelable(false)
+            .create()
+        var shownAt = 0L
+        btnOk.setOnClickListener {
+            if (android.os.SystemClock.uptimeMillis() - shownAt < 600) return@setOnClickListener
+            dialog.dismiss()
+            onClosed()
+        }
+        // 팝업이 뜬 뒤에 누른 엔터만 처리한다(팝업을 띄운 엔터가 떼어지는 것은 무시).
+        var enterDownSeen = false
+        dialog.setOnKeyListener { _, keyCode, event ->
+            when (keyCode) {
+                android.view.KeyEvent.KEYCODE_ENTER, android.view.KeyEvent.KEYCODE_NUMPAD_ENTER,
+                android.view.KeyEvent.KEYCODE_DPAD_CENTER -> {
+                    if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                        enterDownSeen = true
+                    } else if (event.action == android.view.KeyEvent.ACTION_UP && enterDownSeen) {
+                        enterDownSeen = false
+                        btnOk.performClick()
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+        dialog.setOnShowListener {
+            shownAt = android.os.SystemClock.uptimeMillis()
+            btnOk.requestFocus()
+        }
+        dialog.show()
+    }
+
     /** 입력창(비밀번호, 수량 등)이 있는 저장/취소 팝업 */
     fun prompt(
         activity: Activity,

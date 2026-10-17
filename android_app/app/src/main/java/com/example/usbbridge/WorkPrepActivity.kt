@@ -64,7 +64,7 @@ class WorkPrepActivity : BaseActivity() {
 
         findViewById<TextView>(R.id.tvTitleBarText).text = "KOINTBOOK [작업준비]"
 
-        findViewById<TextView>(R.id.tvStore).text = "${AppState.storeCode} / ${AppState.storeName}"
+        findViewById<TextView>(R.id.tvStore).text = AppState.storeLabel()
 
         etWorkerCode = findViewById(R.id.etWorkerCode)
         tvWorkerName = findViewById(R.id.tvWorkerName)
@@ -73,6 +73,15 @@ class WorkPrepActivity : BaseActivity() {
         tvMasterReceiveStatus = findViewById(R.id.tvMasterReceiveStatus)
 
         etWorkerCode.setText(AppState.workerCode)
+
+        // [2026-10-17] "pda 작업자코드 입력칸이 항상 전체선택되어있도록, 새로운 입력값을 넣기 편하게" -
+        // 칸에 들어갈 때(화면이 열릴 때·다른 칸에서 돌아올 때)와 눌러서 커서가 옮겨질 때 모두 값 전체를 선택해 둔다.
+        // 선택된 채로 숫자를 치면 이전 값이 지워지고 새 값으로 바뀐다.
+        etWorkerCode.setSelectAllOnFocus(true)
+        etWorkerCode.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) v.post { etWorkerCode.selectAll() }
+        }
+        etWorkerCode.setOnClickListener { etWorkerCode.post { etWorkerCode.selectAll() } }
 
         etWorkerCode.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -138,6 +147,8 @@ class WorkPrepActivity : BaseActivity() {
             "받은 마스터: 상품 ${fmtCount(db.bookCountForStore(AppState.storeCode))}건"
         }
         pollHandler.post(pollRunnable)
+        // 다른 화면에서 돌아왔을 때 이 칸에 커서가 있으면 다시 전체 선택
+        if (etWorkerCode.hasFocus()) etWorkerCode.post { etWorkerCode.selectAll() }
     }
 
     override fun onPause() {
@@ -186,7 +197,7 @@ class WorkPrepActivity : BaseActivity() {
                         AppState.storeName = name
                     }
                 }
-                findViewById<TextView>(R.id.tvStore).text = "${AppState.storeCode} / ${AppState.storeName}"
+                findViewById<TextView>(R.id.tvStore).text = AppState.storeLabel()
 
                 val parts = mutableListOf<String>()
                 if (storeCount > 0) parts.add("점포 ${fmtCount(storeCount)}건")
@@ -221,9 +232,9 @@ class WorkPrepActivity : BaseActivity() {
             focusPositive = false, // 되돌릴 수 없는 동작이라 기본 포커스는 안전하게 '취소'
             onPositive = {
                 db.resetMasterData()
-                AppState.storeCode = "KYOBO01"
-                AppState.storeName = "교보문고 광화문점"
-                findViewById<TextView>(R.id.tvStore).text = "${AppState.storeCode} / ${AppState.storeName}"
+                AppState.storeCode = ""
+                AppState.storeName = ""
+                findViewById<TextView>(R.id.tvStore).text = AppState.storeLabel()
                 updateItemCountLabel()
                 tvMasterReceiveStatus.text = "마스터가 초기화되었습니다. PC에서 다시 전송해주세요."
                 Toast.makeText(this, "마스터 데이터를 초기화했습니다.", Toast.LENGTH_SHORT).show()

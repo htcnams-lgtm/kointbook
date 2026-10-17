@@ -30,7 +30,7 @@ import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
 from . import db as dbmod
-from .ui_common import center_on_app, setup_treeview, export_rows_to_excel, print_rows_to_excel, print_excel_file, today_str, \
+from .ui_common import center_on_app, setup_treeview, export_rows_to_excel, print_rows_to_excel, print_excel_file, file_date, \
     normalize_area, digit_code_variants, area_section_code, CL_BG, CL_NAVY, win_button
 
 
@@ -272,7 +272,7 @@ class SectionCheckScreen(tk.Frame):
         # "인쇄전 설정창같은게 하나 뜨잖아? 그렇게 해줘" - 저장 위치
         # 대화상자는 계속 안 띄우되, 프린터/매수를 고를 수 있는 진짜 인쇄
         # 대화상자는 뜨도록 print_excel_file()로 바꿨다.
-        path = print_rows_to_excel(data, headers, default_name=f"섹션별아이템재고현황_{today_str()}.xlsx")
+        path = print_rows_to_excel(data, headers, default_name=f"섹션별아이템재고현황_{file_date(self.app)}.xlsx")
         if path:
             print_excel_file(path)
         self.refresh()

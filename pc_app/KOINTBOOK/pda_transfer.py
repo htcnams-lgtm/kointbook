@@ -83,7 +83,7 @@ def push_workers(progress=None):
 
 
 class _PdaBookRows:
-    """books 조회 결과를 PDA용 5열(book_data)로 바꿔 내보낸다.
+    """books 조회 결과를 PDA용 6열(book_data: 점포,바코드,상품명,분야,출판사,도서/문구 구분)로 바꿔 내보낸다.
     바코드는 13자리(0000000000001)로 보내고, 앞 0을 뗀 바코드(1)도 한 줄 더 보낸다
     (스캐너는 앞 0 없이 읽는 일이 있고, PDA는 바코드가 정확히 같아야 상품을 찾기 때문)."""
 
@@ -114,7 +114,7 @@ class _PdaBookRows:
                 break
             for sc, isbn, name, cat, pub, kind in rows:
                 for f in self._forms(isbn):
-                    out.append((sc, f, name, cat, pub))
+                    out.append((sc, f, name, cat, pub, kind or "도서"))
         if len(out) > size:
             self._pending = out[size:]
             out = out[:size]
@@ -152,7 +152,7 @@ def push_books(store_code: str, progress=None):
     ).fetchone()
     store_name = store_name_row[0] if store_name_row else ""
 
-    # [2026-10-13] 서적+문구 상품마스터를 한 BOOK.db로 합쳐서 보낸다(PDA는 바코드+상품명만 있으면
+    # [2026-10-13] 도서+문구 상품마스터를 한 BOOK.db로 합쳐서 보낸다(PDA는 바코드+상품명만 있으면
     # 실사가 된다 - PDA 앱은 그대로). 바코드는 13자리 + 앞 0을 뗀 형태 둘 다 보낸다.
     cur = _PdaBookRows(conn.execute(
         "SELECT store_code, isbn, book_name, category, publisher, kind FROM books WHERE store_code=?",
@@ -163,9 +163,11 @@ def push_books(store_code: str, progress=None):
     try:
         _build_sqlite_file(
             tmp_path,
+            # [2026-10-16] 6번째 열 kind('도서'|'문구') - PDA가 도서/문구 AREA에 맞지 않는 상품을 막는 데 쓴다.
+            # (옛 PDA 앱은 앞의 5열만 읽으므로 새 열이 있어도 문제없다.)
             "CREATE TABLE book_data (store_code TEXT, isbn TEXT, book_name TEXT, "
-            "category TEXT, publisher TEXT)",
-            "INSERT INTO book_data VALUES (?,?,?,?,?)",
+            "category TEXT, publisher TEXT, kind TEXT)",
+            "INSERT INTO book_data VALUES (?,?,?,?,?,?)",
             cur, total, progress, "상품마스터(도서) 파일 만드는 중..."
         )
         meta_conn = sqlite3.connect(tmp_path)
