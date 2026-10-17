@@ -715,7 +715,7 @@ class DiffDetailScreen(tk.Frame):
                        bg=CL_BG).pack(side=tk.LEFT, padx=(12, 0))
         tk.Radiobutton(actions, text="실사-실재고", variable=self.diff_basis, value="real",
                        bg=CL_BG).pack(side=tk.LEFT, padx=(0, 0))
-        # [2026-10-13] 서적/문구 구분(AREA·SECTION 범위). 구분을 바꾸면 바로 다시 조회한다.
+        # [2026-10-13] 도서/문구 구분(AREA·SECTION 범위). 구분을 바꾸면 바로 다시 조회한다.
         self.bar = ScopeBar(actions, on_change=self.auto_refresh)
         self.bar.pack(side=tk.LEFT, padx=(14, 0))
         win_button(actions, text="조회", command=lambda: self.refresh(summary_only=False),

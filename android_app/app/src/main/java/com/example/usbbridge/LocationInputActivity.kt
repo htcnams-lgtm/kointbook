@@ -80,7 +80,7 @@ class LocationInputActivity : BaseActivity() {
     private lateinit var fields: List<EditText>
     private lateinit var rowShelf: android.view.View
 
-    // [2026-10-15] 서적/문구는 AREA 번호로 정해진다(AppState.kindOfArea). 문구(20~29, 80~89)는
+    // [2026-10-15] 도서/문구는 AREA 번호로 정해진다(AppState.kindOfArea). 문구(20~29, 80~89)는
     // AREA -> SECTION 두 칸만 쓰고 서가번호는 X로 저장한다.
     private fun currentKind(): String? = AppState.kindOfArea(etArea.text.toString())
     private fun isStationeryNow(): Boolean = currentKind() == AppState.KIND_STATIONERY
@@ -97,7 +97,7 @@ class LocationInputActivity : BaseActivity() {
         etSection.nextFocusDownId = if (st) R.id.etSection else R.id.etShelfNo
     }
 
-    /** AREA가 서적/문구 범위 밖이면 경고 후 그 칸에 머문다. 통과하면 true. */
+    /** AREA가 도서/문구 범위 밖이면 경고 후 그 칸에 머문다. 통과하면 true. */
     private fun checkAreaAllowed(): Boolean {
         val text = etArea.text.toString().trim()
         if (AppState.kindOfArea(text) != null) return true
@@ -223,7 +223,7 @@ class LocationInputActivity : BaseActivity() {
         setFieldText(1, AppState.currentSection)
         setFieldText(2, if (AppState.currentShelfNo == AppState.STATIONERY_SHELF_NO) "" else AppState.currentShelfNo)
 
-        // AREA 칸 값이 바뀔 때마다 서적/문구에 맞춰 서가번호 줄을 보이거나 숨긴다.
+        // AREA 칸 값이 바뀔 때마다 도서/문구에 맞춰 서가번호 줄을 보이거나 숨긴다.
         etArea.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) {}
             override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}

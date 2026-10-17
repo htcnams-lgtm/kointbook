@@ -2,28 +2,28 @@
 # Copyright (c) 2026 namsman. All rights reserved.
 # KOINTBOOK 재고실사 관리 시스템 - 무단 복제 및 배포를 금합니다.
 """
-[2026-10-13] 서적/문구 마스터 공용 불러오기 모듈 (상품마스터·장부마스터 화면 공용).
+[2026-10-13] 도서/문구 마스터 공용 불러오기 모듈 (상품마스터·장부마스터 화면 공용).
 
-서적과 문구는 파일 양식이 서로 다르다.
+도서와 문구는 파일 양식이 서로 다르다.
 
-  서적 상품마스터·장부마스터  cmdtCode, cmdtName, jo_name, pbcm_name,
+  도서 상품마스터·장부마스터  cmdtCode, cmdtName, jo_name, pbcm_name,
                               rcdsInvnQntt, realInvnQntt, qntt, exceptYsno
   문구 상품마스터             rdp_code, cmdt_code, sale_unpr, cmdt_dvsn_code,
                               cmdt_code_kind_code, cmdt_name
-  문구 장부마스터             서적과 같은 헤더(cmdtCode...) - 값이 "X"인 칸이 있다(없음 = 0)
+  문구 장부마스터             도서와 같은 헤더(cmdtCode...) - 값이 "X"인 칸이 있다(없음 = 0)
 
-두 마스터 모두 books / ledger_master 표에 kind('서적'|'문구')로 같이 저장한다
-(같은 점포에서 서적만 / 문구만 / 둘 다 불러올 수 있고, 불러올 때는 같은 구분의 행만
+두 마스터 모두 books / ledger_master 표에 kind('도서'|'문구')로 같이 저장한다
+(같은 점포에서 도서만 / 문구만 / 둘 다 불러올 수 있고, 불러올 때는 같은 구분의 행만
 교체한다). 문구 상품마스터에서만 price/dvsn_code/kind_code가 채워진다 - 문구
 납품 자료(generation.py)가 그 값을 쓴다.
 
 PDA는 바코드+상품명만 있으면 실사가 가능하므로 PDA 전송(pda_transfer.push_books)은
-서적·문구를 한 BOOK.db로 합쳐서 보낸다.
+도서·문구를 한 BOOK.db로 합쳐서 보낸다.
 """
 
 import csv
 
-KIND_BOOK = "서적"
+KIND_BOOK = "도서"
 KIND_STAT = "문구"
 KINDS = (KIND_BOOK, KIND_STAT)
 
@@ -123,7 +123,7 @@ def header_kind(header):
 
 def read_master(path, kind, is_ledger, progress=None):
     """파일을 읽어 저장용 dict 목록을 돌려준다.
-    kind: '서적'|'문구'. 양식이 고른 구분과 안 맞으면 ValueError(사용자에게 그대로 보여줄 문장)."""
+    kind: '도서'|'문구'. 양식이 고른 구분과 안 맞으면 ValueError(사용자에게 그대로 보여줄 문장)."""
     allrows = _read_xlsx_all(path) if path.lower().endswith(".xlsx") else _read_csv_all(path)
     if not allrows:
         return []
@@ -131,7 +131,7 @@ def read_master(path, kind, is_ledger, progress=None):
     fmt = header_kind(header)
     if kind == KIND_STAT and not is_ledger and fmt != "stat_product":
         raise ValueError("문구 상품마스터 양식이 아닙니다.\n(헤더: rdp_code, cmdt_code, sale_unpr, cmdt_dvsn_code, cmdt_code_kind_code, cmdt_name)\n"
-                         "서적 파일이면 '서적' 버튼으로 불러오세요.")
+                         "도서 파일이면 '도서' 버튼으로 불러오세요.")
     if kind == KIND_BOOK and fmt == "stat_product":
         raise ValueError("문구 상품마스터 양식입니다. '문구' 버튼으로 불러오세요.")
     if fmt is None:

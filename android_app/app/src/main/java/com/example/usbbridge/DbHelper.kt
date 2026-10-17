@@ -173,7 +173,7 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
         if (db.isReadOnly) return
-        // [2026-10-16] 상품마스터에 서적/문구 구분(kind) 열이 없는 옛 DB는 열만 덧붙인다.
+        // [2026-10-16] 상품마스터에 도서/문구 구분(kind) 열이 없는 옛 DB는 열만 덧붙인다.
         // (DB_VERSION을 올리면 onUpgrade가 표를 전부 지워서 실사 데이터가 사라지므로 올리지 않는다.)
         try {
             var hasKind = false
@@ -182,7 +182,7 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
             }
             if (!hasKind) db.execSQL("ALTER TABLE books ADD COLUMN kind TEXT DEFAULT ''")
         } catch (_: Exception) {
-            // 열을 못 붙여도 서적/문구 판정은 바코드 모양 기준으로 동작한다.
+            // 열을 못 붙여도 도서/문구 판정은 바코드 모양 기준으로 동작한다.
         }
         try {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_books_store ON books(store_code, isbn)")
@@ -330,7 +330,7 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
      *
      * BOOK.db는 KOINTBOOK PC의 pda_transfer.push_books()가 만드는 파일로,
      * 테이블명은 book_data (store_code, isbn, book_name, category, publisher, kind)다
-     * (kind = '서적'|'문구', 1.5.15부터. 옛 파일엔 없을 수 있다)
+     * (kind = '도서'|'문구', 1.5.15부터. 옛 파일엔 없을 수 있다)
      * (ZZOINT의 PRODUCT.db/product_data에 대응).
      *
      * @param onProgress (안내문구, 처리한 건수, 전체 건수)
@@ -448,8 +448,8 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
                         }
                     } catch (_: Exception) { }
                     val stmt = bookInsertStatement(localDb)
-                    // [2026-10-16] PC가 서적/문구 구분(kind)을 같이 보낸다. 옛 PC 파일엔 이 열이 없으니
-                    // 있을 때만 읽고, 없으면 빈 값으로 둔다(그 경우 서적/문구는 바코드 모양으로 판정).
+                    // [2026-10-16] PC가 도서/문구 구분(kind)을 같이 보낸다. 옛 PC 파일엔 이 열이 없으니
+                    // 있을 때만 읽고, 없으면 빈 값으로 둔다(그 경우 도서/문구는 바코드 모양으로 판정).
                     var fileHasKind = false
                     ext.rawQuery("PRAGMA table_info(book_data)", null).use { c ->
                         while (c.moveToNext()) if (c.getString(1) == "kind") fileHasKind = true
@@ -549,7 +549,7 @@ class DbHelper private constructor(context: Context) : SQLiteOpenHelper(context.
     }
 
     // ---------- books ----------
-    /** kind = 상품마스터의 서적/문구 구분("서적" | "문구"), 옛 마스터는 빈 값 */
+    /** kind = 상품마스터의 도서/문구 구분("도서" | "문구"), 옛 마스터는 빈 값 */
     data class BookInfo(
         val isbn: String, val bookName: String, val category: String, val publisher: String,
         val kind: String = ""

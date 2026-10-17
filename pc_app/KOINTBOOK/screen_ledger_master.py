@@ -68,10 +68,10 @@ class LedgerMasterScreen(tk.Frame):
         self.btn_date = win_button(top, text=self.pending_date, command=lambda: None, kind="normal", state="disabled")
         self.btn_date.grid(row=0, column=6, padx=(0, 10))
 
-        # [2026-10-13] 서적/문구는 파일 양식이 달라서 불러오기 버튼을 둘로 나눴다(각각 같은 구분만 교체).
+        # [2026-10-13] 도서/문구는 파일 양식이 달라서 불러오기 버튼을 둘로 나눴다(각각 같은 구분만 교체).
         imp = tk.Frame(top, bg=COLOR_HEADER_BG)
         imp.grid(row=0, column=7, padx=(0, 20))
-        win_button(imp, text="서적 불러오기", command=lambda: self.import_kind("서적"), kind="normal").pack(side=tk.LEFT, padx=(0, 4))
+        win_button(imp, text="도서 불러오기", command=lambda: self.import_kind("도서"), kind="normal").pack(side=tk.LEFT, padx=(0, 4))
         win_button(imp, text="문구 불러오기", command=lambda: self.import_kind("문구"), kind="normal").pack(side=tk.LEFT)
 
         # ---- 조회 줄 ----
@@ -84,7 +84,7 @@ class LedgerMasterScreen(tk.Frame):
         self.e_search.pack(side=tk.LEFT, padx=(8, 4), ipady=2)
         self.e_search.bind("<Return>", lambda ev: self.refresh())
         tk.Label(search_row, text="구분", bg=CL_BG, fg=CL_TEXT_DIM).pack(side=tk.LEFT, padx=(14, 4))
-        self.cb_kind = ttk.Combobox(search_row, values=("전체", "서적", "문구"), state="readonly", width=6)
+        self.cb_kind = ttk.Combobox(search_row, values=("전체", "도서", "문구"), state="readonly", width=6)
         self.cb_kind.set("전체")
         self.cb_kind.pack(side=tk.LEFT)
         self.cb_kind.bind("<<ComboboxSelected>>", lambda e: self.refresh())
@@ -141,7 +141,7 @@ class LedgerMasterScreen(tk.Frame):
                "FROM ledger_master WHERE store_code=?")
         params = [store_code]
         kind_sel = self.cb_kind.get()
-        if kind_sel in ("서적", "문구"):
+        if kind_sel in ("도서", "문구"):
             sql += " AND kind=?"
             params.append(kind_sel)
         if keyword:
@@ -172,7 +172,7 @@ class LedgerMasterScreen(tk.Frame):
             rcds_qty = disp_qty(rcds_qty, b["rcds_x"])
             real_qty = disp_qty(real_qty, b["real_x"])
             missing_qty = disp_qty(missing_qty, b["missing_x"])
-            rows.append((b["kind"] or "서적", b["isbn"], b["book_name"], b["category"], b["publisher"],
+            rows.append((b["kind"] or "도서", b["isbn"], b["book_name"], b["category"], b["publisher"],
                         rcds_qty, real_qty, missing_qty, is_exc))
         self._view_rows_cache = rows
         self._view_total = len(rows)
@@ -225,7 +225,7 @@ class LedgerMasterScreen(tk.Frame):
     ]
 
     def import_kind(self, kind):
-        """[서적 불러오기]/[문구 불러오기] - 양식이 서로 달라서 구분을 먼저 고르고 파일을 연다
+        """[도서 불러오기]/[문구 불러오기] - 양식이 서로 달라서 구분을 먼저 고르고 파일을 연다
         (masters.py 참고). 같은 점포의 같은 구분만 교체한다."""
         from .masters_ui import import_master_dialog
         import_master_dialog(self, "ledger_master", "장부마스터", kind)

@@ -237,7 +237,7 @@
                 <TextView
                     android:layout_width="48dp"
                     android:layout_height="wrap_content"
-                    android:text="서적"
+                    android:text="도서"
                     android:textStyle="bold"
                     android:textColor="#000000"
                     android:textSize="15sp" />

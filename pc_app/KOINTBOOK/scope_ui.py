@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2026 namsman. All rights reserved.
 # KOINTBOOK 재고실사 관리 시스템 - 무단 복제 및 배포를 금합니다.
-"""자료생성 그룹 화면 공용: [구분: 전체/서적/문구] 막대 (구분 기준은 AREA 번호 고정) (scope.py 참고)."""
+"""자료생성 그룹 화면 공용: [구분: 전체/도서/문구] 막대 (구분 기준은 AREA 번호 고정) (scope.py 참고)."""
 
 import tkinter as tk
 from tkinter import ttk
@@ -14,7 +14,7 @@ class ScopeBar(tk.Frame):
         super().__init__(parent, bg=bg)
         self._on_change = on_change
         tk.Label(self, text="구분", bg=bg, fg=CL_TEXT_DIM).pack(side=tk.LEFT, padx=(0, 4))
-        self.cb = ttk.Combobox(self, values=("전체", "서적", "문구"), state="readonly", width=6)
+        self.cb = ttk.Combobox(self, values=("전체", "도서", "문구"), state="readonly", width=6)
         self.cb.set("전체")
         self.cb.pack(side=tk.LEFT)
         self.cb.bind("<<ComboboxSelected>>", lambda e: self._changed())

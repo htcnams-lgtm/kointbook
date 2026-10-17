@@ -81,15 +81,15 @@ class StockInputActivity : BaseActivity() {
     private var listTotalQty = 0
     private var selectedRowIndex = -1
 
-    // [2026-10-16] 서적 AREA에 문구 상품(문구 AREA에 서적 상품)을 입력하려 해서 막는 경고창이 떠 있는 동안 true.
+    // [2026-10-16] 도서 AREA에 문구 상품(문구 AREA에 도서 상품)을 입력하려 해서 막는 경고창이 떠 있는 동안 true.
     // 경고창에서 확인을 누르기 전에는 새 스캔/입력을 받지 않는다.
     private var kindBlockShowing = false
 
     /**
      * [2026-10-16] "도서 에리어에서 문구 상품 스캔 및 입력금지 / 문구 에리어에서 도서 상품 스캔 및 입력금지" -
-     * 지금 AREA의 구분(서적/문구)과 이 바코드의 상품마스터 구분(BarcodeKind.kindOf)이 다르면 저장하지 않고
+     * 지금 AREA의 구분(도서/문구)과 이 바코드의 상품마스터 구분(BarcodeKind.kindOf)이 다르면 저장하지 않고
      * 경고음(진동) + 큰 빨간 경고창을 띄운 뒤 false를 돌려준다. 스캔이든 손으로 친 값이든 같은 검사를 받는다.
-     * 마스터에 없는 바코드(미등록)나 구분이 없는 옛 마스터, 서적/문구 범위 밖 AREA는 구분할 수 없어 검사하지 않는다
+     * 마스터에 없는 바코드(미등록)나 구분이 없는 옛 마스터, 도서/문구 범위 밖 AREA는 구분할 수 없어 검사하지 않는다
      * (미등록은 기존 [미등록상품] 설정이 처리).
      */
     private fun allowedForArea(code: String, info: DbHelper.BookInfo?): Boolean {
@@ -481,7 +481,7 @@ class StockInputActivity : BaseActivity() {
 
     /**
      * [2026-10-16] "pda 미등록 메세지 문구는 도서가 아니라 문구로" - 미등록 안내(입력칸 아래 글, 차단 팝업, 확인 팝업)에
-     * 문구 AREA에서는 '도서' 대신 '문구'를 쓴다. 서적 AREA와 서적/문구 범위 밖 AREA는 예전처럼 '도서'.
+     * 문구 AREA에서는 '도서' 대신 '문구'를 쓴다. 도서 AREA와 도서/문구 범위 밖 AREA는 예전처럼 '도서'.
      */
     private fun itemWord(): String = if (AppState.isStationery) "문구" else "도서"
 
@@ -493,7 +493,7 @@ class StockInputActivity : BaseActivity() {
         // 허용 모드) 이 확인 없이 바로 진행한다.
         val hasMaster = db.hasAnyBooks(AppState.storeCode)
         val info = db.findBook(AppState.storeCode, isbn)
-        // [2026-10-16] 서적/문구 AREA와 맞지 않는 바코드는 미등록 확인보다 먼저 막는다.
+        // [2026-10-16] 도서/문구 AREA와 맞지 않는 바코드는 미등록 확인보다 먼저 막는다.
         if (!allowedForArea(isbn, info)) return
         // [2026-10-08] PC 상품마스터 화면의 [미등록상품] 설정(allow/warn/block)을 따른다.
         // 미등록일 때만 설정을 읽는다(등록된 바코드 스캔에는 추가 DB 조회 없음)

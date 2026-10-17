@@ -64,9 +64,9 @@ class DataGenerateScreen(tk.Frame):
 
         tk.Frame(self, bg="#C4C8D0", height=1).pack(fill=tk.X, padx=12, pady=(0, 8))
 
-        # ---- [2026-10-13] 생성 패널: 서적 / 문구 카드 ------------------------------------
-        # 서적과 문구는 만드는 자료 양식이 달라서 카드 두 장으로 나눴다. 필요한 쪽만 체크해서
-        # 한 번에 만든다(서적만 / 문구만 / 둘 다). 카드 위쪽 숫자는 지금 DB에 있는 스캔 건수라
+        # ---- [2026-10-13] 생성 패널: 도서 / 문구 카드 ------------------------------------
+        # 도서와 문구는 만드는 자료 양식이 달라서 카드 두 장으로 나눴다. 필요한 쪽만 체크해서
+        # 한 번에 만든다(도서만 / 문구만 / 둘 다). 카드 위쪽 숫자는 지금 DB에 있는 스캔 건수라
         # 만들기 전에 "이 구분에 자료가 있는지" 바로 알 수 있다.
         panel = tk.Frame(self, bg=CL_BG)
         panel.pack(fill=tk.X, padx=12, pady=(0, 8))
@@ -88,7 +88,7 @@ class DataGenerateScreen(tk.Frame):
             lbl.pack(side=tk.RIGHT)
             return f, lbl
 
-        fb, self.lbl_book = card(0, "서적 자료", self.var_do_book)
+        fb, self.lbl_book = card(0, "도서 자료", self.var_do_book)
         for key, text in (("d1", "kyobo_data1.txt  (서가번호11 + 바코드13)"),
                           ("d2", "kyobo_data2.txt  (바코드13 + 수량5)"),
                           ("shelf", "서가별스캔데이터.xlsx"),
@@ -150,7 +150,7 @@ class DataGenerateScreen(tk.Frame):
 
     def _update_go_button(self):
         n = int(self.var_do_book.get()) + int(self.var_do_stat.get())
-        self.lbl_go.config(text="" if n else "생성할 구분(서적/문구)을 체크하세요.")
+        self.lbl_go.config(text="" if n else "생성할 구분(도서/문구)을 체크하세요.")
 
     def _row_values(self, no, r):
         """표(Treeview)에 실제로 보여줄 값을 raw row 하나에서 만든다.
@@ -178,15 +178,15 @@ class DataGenerateScreen(tk.Frame):
         keep = (ctx == self._loaded_ctx)
         self._loaded_ctx = ctx
 
-        # 카드 위쪽 건수 미리보기(서적/문구별 스캔 줄 수·바코드 수·수량)
+        # 카드 위쪽 건수 미리보기(도서/문구별 스캔 줄 수·바코드 수·수량)
         try:
             sm = generation.summary(self.app)
-            for key, lbl in (("서적", self.lbl_book), ("문구", self.lbl_stat)):
+            for key, lbl in (("도서", self.lbl_book), ("문구", self.lbl_stat)):
                 n, codes, qty = sm[key]
                 lbl.config(text=f"스캔 {n:,}줄 · 바코드 {codes:,}종 · 수량 {qty:,}" if n else "스캔 자료 없음")
             if not sm["문구마스터"]:
                 self.lbl_stat.config(text=self.lbl_stat.cget("text") + "  (문구 상품마스터 없음)")
-            for kind, lbl in (("서적", self.lbl_book), ("문구", self.lbl_stat)):
+            for kind, lbl in (("도서", self.lbl_book), ("문구", self.lbl_stat)):
                 if scope.is_defined(kind):
                     lbl.config(text=lbl.cget("text") + f"  [{scope.describe(kind)}]")
         except Exception:
@@ -194,7 +194,7 @@ class DataGenerateScreen(tk.Frame):
 
         def build():
             book_rows, stat_rows, _stat = generation.split_counts(self.app)
-            if kind_sel == "서적":
+            if kind_sel == "도서":
                 ids = [r["id"] for r in book_rows]
             elif kind_sel == "문구":
                 ids = [r["id"] for r in stat_rows]
@@ -239,7 +239,7 @@ class DataGenerateScreen(tk.Frame):
             messagebox.showinfo("완료", f"저장되었습니다:\n{path}")
 
     def print_view(self):
-        """[출력] - 지금 구분(전체/서적/문구) 범위의 실사내역을 인쇄 대화상자로 보낸다."""
+        """[출력] - 지금 구분(전체/도서/문구) 범위의 실사내역을 인쇄 대화상자로 보낸다."""
         from .ui_common import print_rows_to_excel, print_excel_file
         kind = self.bar.kind()
         headers, rows = generation.raw_rows(self.app, kind)
@@ -264,13 +264,13 @@ class DataGenerateScreen(tk.Frame):
         messagebox.showinfo("완료", f"{label} 파일이 생성되었습니다:\n{out_path}")
 
     def generate_selected(self):
-        """체크한 서적/문구 자료를 한 번에 만든다.
-        [2026-10-16] "서적자료, 문구자료 동시 생성시 시간이 걸리니 진행률을 보여줄수있나" - 만드는 일은 백그라운드로
+        """체크한 도서/문구 자료를 한 번에 만든다.
+        [2026-10-16] "도서자료, 문구자료 동시 생성시 시간이 걸리니 진행률을 보여줄수있나" - 만드는 일은 백그라운드로
         돌리고 진행률 팝업(몇 번째 파일, 지금 만드는 파일 이름, 경과 시간)을 보여 준다. [취소]하면 다음 파일부터
         멈추고 이미 만든 파일은 폴더에 남는다."""
         do_book, do_stat = self.var_do_book.get(), self.var_do_stat.get()
         if not (do_book or do_stat):
-            messagebox.showinfo("알림", "생성할 구분(서적/문구)을 체크하세요.")
+            messagebox.showinfo("알림", "생성할 구분(도서/문구)을 체크하세요.")
             return
         out_dir = generation.output_dir(self.app)
         files = {k: v.get() for k, v in self.var_f.items()}   # tkinter 값은 여기(화면 스레드)에서 미리 읽어 둔다
@@ -293,7 +293,7 @@ class DataGenerateScreen(tk.Frame):
             done, skipped = result
             msg = []
             if done:
-                msg.append(f"저장 위치: {out_dir}  (서적전용 / 문구전용 폴더)\n")
+                msg.append(f"저장 위치: {out_dir}  (도서 / 문구 폴더)\n")
                 msg += [f"  {name}  ({n:,}건)" for name, n in done]
             if skipped:
                 msg.append("\n확인할 항목")

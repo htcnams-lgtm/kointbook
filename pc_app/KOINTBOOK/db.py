@@ -345,13 +345,13 @@ def init_db():
     _add_column_if_missing(cur, "books", "real_qty", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "books", "missing_qty", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "books", "except_flag", "TEXT DEFAULT 'N'")
-    # [2026-10-13] 서적/문구 마스터 분리: 두 양식이 달라서 같은 표에 구분(kind)으로 같이 담는다.
-    #  kind      = '서적' | '문구' (옛 DB의 기존 행은 모두 '서적')
+    # [2026-10-13] 도서/문구 마스터 분리: 두 양식이 달라서 같은 표에 구분(kind)으로 같이 담는다.
+    #  kind      = '도서' | '문구' (옛 DB의 기존 행은 모두 '도서', 2026-10-17 전에는 '서적'이었다)
     #  price     = 문구 상품마스터 sale_unpr (납품 상세 자료의 단가)
     #  dvsn_code = 문구 상품마스터 cmdt_dvsn_code (401/402/403 - 납품 상세 자료의 구분코드)
     #  kind_code = 문구 상품마스터 cmdt_code_kind_code (502 - 납품 상세 자료의 종류코드)
     for _tbl in ("books", "ledger_master"):
-        _add_column_if_missing(cur, _tbl, "kind", "TEXT DEFAULT '서적'")
+        _add_column_if_missing(cur, _tbl, "kind", "TEXT DEFAULT '도서'")
         _add_column_if_missing(cur, _tbl, "price", "INTEGER DEFAULT 0")
         _add_column_if_missing(cur, _tbl, "dvsn_code", "TEXT DEFAULT ''")
         _add_column_if_missing(cur, _tbl, "kind_code", "TEXT DEFAULT ''")
@@ -360,7 +360,8 @@ def init_db():
         _add_column_if_missing(cur, _tbl, "real_x", "INTEGER DEFAULT 0")
         _add_column_if_missing(cur, _tbl, "missing_x", "INTEGER DEFAULT 0")
         _add_column_if_missing(cur, _tbl, "rdp_code", "TEXT DEFAULT ''")  # 문구 상품마스터 rdp_code(납품처) - 파일 값 그대로
-        cur.execute(f"UPDATE {_tbl} SET kind='서적' WHERE kind IS NULL OR kind=''")
+        # [2026-10-17] "서적"을 "도서"로 바꿨다: 예전 구분 값 '서적'(옛 DB·옛 백업)도 '도서'로 바꿔 둔다.
+        cur.execute(f"UPDATE {_tbl} SET kind='도서' WHERE kind IS NULL OR kind='' OR kind='서적'")
     conn.commit()
 
     # 실사 데이터가 수십만 건이어도 (점포+조사일자) 조회와 AREA/SECTION/서가/단/열 정렬이

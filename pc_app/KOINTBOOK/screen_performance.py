@@ -100,7 +100,7 @@ def _confirm_unregistered(popup, verb):
 
 
 def _kind_blocked(popup, store_code, area, code):
-    """[2026-10-16] 서적 AREA에 문구 상품(문구 AREA에 서적 상품)을 넣으려 하면 경고음 + 안내 후 True.
+    """[2026-10-16] 도서 AREA에 문구 상품(문구 AREA에 도서 상품)을 넣으려 하면 경고음 + 안내 후 True.
     PDA의 입력 금지(BarcodeKind.kt)와 같은 기준이다(상품마스터 구분 우선, 마스터에 없으면 바코드 모양)."""
     conn = dbmod.get_conn()
     try:
@@ -620,7 +620,7 @@ class PerformanceScreen(tk.Frame):
             book_name = r["book_name"]
             isbn_changed = isbn != (r["isbn"] or "")
             if isbn_changed:
-                # [2026-10-16] 바코드를 바꿀 때는 이 줄의 AREA(서적/문구)에 맞는 상품이어야 한다.
+                # [2026-10-16] 바코드를 바꿀 때는 이 줄의 AREA(도서/문구)에 맞는 상품이어야 한다.
                 if _kind_blocked(popup, r["store_code"], r["area"], isbn):
                     e_isbn.focus_set()
                     return
@@ -779,7 +779,7 @@ class PerformanceScreen(tk.Frame):
                     dan=str(dan), has_existing=bool(existing), worker=worker)
 
     def _kind_conflicts(self, plan, target):
-        """[2026-10-16] 위치를 target AREA로 옮길 때 서적/문구 구분이 안 맞게 되는 줄 [(item, 정보)]."""
+        """[2026-10-16] 위치를 target AREA로 옮길 때 도서/문구 구분이 안 맞게 되는 줄 [(item, 정보)]."""
         items = plan["items"]
         if not items:
             return []
@@ -954,7 +954,7 @@ class PerformanceScreen(tk.Frame):
                 lines.append(f"※ 이미 {tgt_txt}에 있는 {plan['skipped']:,}건은 제외됩니다")
             kind_bad = self._kind_conflicts(plan, tgt)
             if kind_bad:
-                lines.append(f"⛔ {tgt[0]} AREA({scope.kind_of_area(tgt[0])})와 서적/문구 구분이 맞지 않는 줄 "
+                lines.append(f"⛔ {tgt[0]} AREA({scope.kind_of_area(tgt[0])})와 도서/문구 구분이 맞지 않는 줄 "
                              f"{len(kind_bad):,}건 - 이대로는 수정할 수 없습니다")
             lbl_prev.config(text="\n".join(lines))
 
@@ -970,14 +970,14 @@ class PerformanceScreen(tk.Frame):
                 messagebox.showinfo("알림", "선택한 줄이 모두 이미 이 위치에 있습니다.", parent=popup)
                 return
             tgt_txt = self._loc_txt(*tgt)
-            # [2026-10-16] 옮겨 갈 AREA가 서적이면 서적 상품만, 문구면 문구 상품만 들어갈 수 있다.
+            # [2026-10-16] 옮겨 갈 AREA가 도서이면 도서 상품만, 문구면 문구 상품만 들어갈 수 있다.
             kind_bad = self._kind_conflicts(plan, tgt)
             if kind_bad:
                 popup.bell()
                 ex = "\n".join(f"· {barcode_kind.short(m)}" for _it, m in kind_bad[:6])
                 more = f"\n  … 외 {len(kind_bad) - 6:,}건" if len(kind_bad) > 6 else ""
                 messagebox.showerror(
-                    "위치 수정 불가 - 서적/문구 구분",
+                    "위치 수정 불가 - 도서/문구 구분",
                     f"선택한 줄 중 {len(kind_bad):,}건이 {tgt[0]} AREA({scope.kind_of_area(tgt[0])})에 "
                     f"들어갈 수 없는 상품입니다.\n수정하지 않았습니다.\n\n{ex}{more}\n\n"
                     "해당 줄을 빼고 선택하거나, 맞는 구분의 AREA로 수정하세요.", parent=popup)
@@ -1300,7 +1300,7 @@ class PerformanceScreen(tk.Frame):
                 messagebox.showinfo("알림", "수량은 숫자로 입력하세요.", parent=popup)
                 return
 
-            # [2026-10-16] 서적 AREA에 문구 상품, 문구 AREA에 서적 상품은 등록할 수 없다.
+            # [2026-10-16] 도서 AREA에 문구 상품, 문구 AREA에 도서 상품은 등록할 수 없다.
             if _kind_blocked(popup, self.app.state.store_code, area, isbn):
                 e_isbn.focus_set()
                 e_isbn.selection_range(0, tk.END)

@@ -47,7 +47,7 @@ class StockReportScreen(tk.Frame):
         win_button(top, text="발행", command=self.print_report, kind="normal").grid(row=0, column=7, padx=4)
         win_button(top, text="보고서생성", command=self.generate_report, kind="accent").grid(row=0, column=8, padx=4)
 
-        # [2026-10-13] 서적/문구 구분(AREA·SECTION 범위) - 조회·발행·보고서생성에 모두 적용된다.
+        # [2026-10-13] 도서/문구 구분(AREA·SECTION 범위) - 조회·발행·보고서생성에 모두 적용된다.
         scope_row = tk.Frame(self, bg=CL_BG)
         scope_row.pack(fill=tk.X, padx=12, pady=(0, 4))
         self.bar = ScopeBar(scope_row, on_change=self.refresh)

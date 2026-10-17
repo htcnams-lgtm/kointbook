@@ -2,13 +2,13 @@
 # Copyright (c) 2026 namsman. All rights reserved.
 # KOINTBOOK 재고실사 관리 시스템 - 무단 복제 및 배포를 금합니다.
 """
-서적 AREA에 문구 상품, 문구 AREA에 서적 상품이 들어가는 것을 막기 위한 바코드 종류 판정. [2026-10-16]
+도서 AREA에 문구 상품, 문구 AREA에 도서 상품이 들어가는 것을 막기 위한 바코드 종류 판정. [2026-10-16]
 
-PDA(BarcodeKind.kt)와 같은 규칙이다: 상품마스터를 [서적 불러오기]/[문구 불러오기]로 따로 불러오면
-books.kind에 '서적'/'문구'가 붙는다. 이 구분을 AREA의 구분과 비교한다.
-  - 마스터에 없는 바코드(미등록)는 서적인지 문구인지 알 수 없으므로 여기서는 막지 않는다
+PDA(BarcodeKind.kt)와 같은 규칙이다: 상품마스터를 [도서 불러오기]/[문구 불러오기]로 따로 불러오면
+books.kind에 '도서'/'문구'가 붙는다. 이 구분을 AREA의 구분과 비교한다.
+  - 마스터에 없는 바코드(미등록)는 도서인지 문구인지 알 수 없으므로 여기서는 막지 않는다
     (기존 [미등록상품] 설정 허용/경고/차단이 처리한다).
-AREA의 구분은 scope.kind_of_area(서적 10~19·90~99 / 문구 20~29·80~89)를 쓴다. 허용 밖 AREA는
+AREA의 구분은 scope.kind_of_area(도서 10~19·90~99 / 문구 20~29·80~89)를 쓴다. 허용 밖 AREA는
 구분할 수 없으므로 통과시킨다(그쪽은 AREA 검사가 따로 막는다).
 이 모듈은 tkinter를 쓰지 않는다.
 """
@@ -16,7 +16,7 @@ AREA의 구분은 scope.kind_of_area(서적 10~19·90~99 / 문구 20~29·80~89)�
 from . import scope
 from .masters import bc13, norm_barcode
 
-KIND_BOOK = "서적"
+KIND_BOOK = "도서"
 KIND_STAT = "문구"
 
 
@@ -31,7 +31,7 @@ def _variants(code):
 
 
 def master_kinds(conn, store_code, code):
-    """상품마스터에서 이 바코드의 구분 집합({'서적'}, {'문구'}, 둘 다, 또는 없으면 빈 집합)."""
+    """상품마스터에서 이 바코드의 구분 집합({'도서'}, {'문구'}, 둘 다, 또는 없으면 빈 집합)."""
     vs = _variants(code)
     if not vs:
         return set()
@@ -126,5 +126,5 @@ def message(m, name=""):
 
 
 def short(m):
-    """목록/요약용 한 줄: '서적 AREA 10 ← 문구 상품'"""
+    """목록/요약용 한 줄: '도서 AREA 10 ← 문구 상품'"""
     return f"{m['area_kind']} AREA {m['area']} ← {m['item_kind']} 상품({m['code']})"

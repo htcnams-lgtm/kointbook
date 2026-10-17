@@ -63,7 +63,7 @@ from .ui_common import (
 
 # [2026-09-28] 작업자별 실사집계 막대그래프에 쓰는 색상 순환(ZZOINT와 동일).
 COLOR_DUP_ROW = "#FADADD"  # [2026-10-08] 중복 강조(ZZOINT와 같은 분홍)
-COLOR_KIND_BAD_ROW = "#FF9E9E"  # [2026-10-16] 서적/문구 AREA와 안 맞는 줄(중복의 연분홍보다 진한 빨강)
+COLOR_KIND_BAD_ROW = "#FF9E9E"  # [2026-10-16] 도서/문구 AREA와 안 맞는 줄(중복의 연분홍보다 진한 빨강)
 BAR_COLORS = [CL_NAVY, CL_GOLD, "#5F6470", "#7C9AC7", "#8A6D2E", "#3E5C8A"]
 
 STAGE_COLUMNS = ("no", "area", "section", "shelf_no", "dan", "yeol", "isbn", "book_name",
@@ -322,7 +322,7 @@ class PdaReceiveScreen(tk.Frame):
                 "목록의 분홍색 줄과 아래 [중복 섹션 목록]을 확인하고, 필요없는 작업자 자료를 선택해 삭제하세요.")
 
     def _flag_kind_mismatch(self, rows):
-        """[2026-10-16] 서적 AREA에 문구 상품, 문구 AREA에 서적 상품이 들어 있는 줄을 찾아 r["_kind_bad"]에
+        """[2026-10-16] 도서 AREA에 문구 상품, 문구 AREA에 도서 상품이 들어 있는 줄을 찾아 r["_kind_bad"]에
         정보를 달고(맞으면 None), 어긋난 줄 목록 [(줄, 정보)]를 돌려준다. PDA 앱이 이미 막지만, 옛 버전 앱이나
         다른 경로로 올라온 자료를 PC에서도 한 번 더 거른다. 판정 기준은 barcode_kind.py(상품마스터 우선, 없으면
         바코드 모양)."""
@@ -347,7 +347,7 @@ class PdaReceiveScreen(tk.Frame):
             self.bell()
         except tk.TclError:
             pass
-        lines = [f"서적/문구 구분이 AREA와 맞지 않는 줄이 {len(bad):,}건 있습니다.",
+        lines = [f"도서/문구 구분이 AREA와 맞지 않는 줄이 {len(bad):,}건 있습니다.",
                  "목록에서 진한 빨간색으로 표시됩니다.\n"]
         for r, m in bad[:8]:
             lines.append(f"· {r.get('area') or ''}-{r.get('section') or ''}  {barcode_kind.short(m)}")
@@ -355,8 +355,8 @@ class PdaReceiveScreen(tk.Frame):
             lines.append(f"  … 외 {len(bad) - 8:,}건")
         lines.append("\n이 줄들이 남아 있으면 [저장]되지 않습니다.\n"
                      "빨간 줄을 선택해 [삭제]한 뒤 저장하거나, PDA에서 올바른 AREA로 다시 입력해 받으세요.\n"
-                     "(서적 AREA 10~19·90~99 / 문구 AREA 20~29·80~89)")
-        messagebox.showwarning("서적/문구 구분 오류", "\n".join(lines))
+                     "(도서 AREA 10~19·90~99 / 문구 AREA 20~29·80~89)")
+        messagebox.showwarning("도서/문구 구분 오류", "\n".join(lines))
 
     def _warn_if_mismatch(self, rows):
         """[2026-09-30] "PC쪽 조사일자가 PDA랑 안맞으면 차이내역, 자료생성등
@@ -595,7 +595,7 @@ class PdaReceiveScreen(tk.Frame):
         if not self.staged:
             messagebox.showinfo("알림", "저장할 수신 자료가 없습니다.")
             return
-        # [2026-10-16] 서적/문구 구분이 AREA와 안 맞는 줄이 남아 있으면 저장하지 않는다(그 사이 상품마스터가
+        # [2026-10-16] 도서/문구 구분이 AREA와 안 맞는 줄이 남아 있으면 저장하지 않는다(그 사이 상품마스터가
         # 바뀌었을 수 있어 저장 직전에 다시 판정한다).
         kind_bad = self._flag_kind_mismatch(self.staged)
         if kind_bad:
@@ -605,7 +605,7 @@ class PdaReceiveScreen(tk.Frame):
                 self.bell()
             except tk.TclError:
                 pass
-            lines = [f"서적/문구 구분이 AREA와 맞지 않는 줄 {len(kind_bad):,}건이 있어 저장하지 않았습니다.\n"]
+            lines = [f"도서/문구 구분이 AREA와 맞지 않는 줄 {len(kind_bad):,}건이 있어 저장하지 않았습니다.\n"]
             for r, m in kind_bad[:8]:
                 lines.append(f"· {r.get('area') or ''}-{r.get('section') or ''}  {barcode_kind.short(m)}")
             if len(kind_bad) > 8:
