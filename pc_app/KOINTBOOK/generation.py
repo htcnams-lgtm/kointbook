@@ -70,7 +70,7 @@ from . import scope
 
 
 def output_dir(app, kind=None):
-    """생성 폴더. kind가 '도서'/'문구'면 그 아래 '도서'/'문구' 하위 폴더(2026-10-17: 예전 '서적전용'/'문구전용'에서 '전용'을 뺐다)."""
+    """생성 폴더. kind가 '도서'/'문구'면 그 아래 '도서'/'문구' 하위 폴더(2026-10-17: 예전 '서적전용'/'문구전용'에서 '전용'을 뺐다. 파일 이름 속 표시는 scope.tag = 도서전용/문구전용)."""
     date = file_date(app)
     store_name = app.state.store_name or "매장"
     safe_name = re.sub(r'[\\/:*?"<>|]', "", store_name).strip() or "매장"
